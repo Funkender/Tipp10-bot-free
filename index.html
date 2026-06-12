@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Tipp10 Bot - Free Edition (3 Min Delay Kick)</title>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 30px; background: #0f172a; color: #e5e7eb; max-width: 900px; margin: 0 auto; }
+    h1 { color: #facc15; border-bottom: 2px solid #1e293b; padding-bottom: 10px; }
+    h2 { color: #89b4fa; margin-top: 30px; }
+    pre { background: #1e293b; padding: 16px; border-radius: 8px; white-space: pre-wrap; overflow-x: auto; font-family: monospace; font-size: 13px; border: 1px solid #334155; position: relative; }
+    button { background: #facc15; color: #0f172a; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 15px; transition: background 0.2s; }
+    button:hover { background: #eab308; }
+    .info-box { background: #1e1e2e; border-left: 4px solid #a6e3a1; padding: 12px; margin-bottom: 20px; border-radius: 0 8px 8px 0; font-size: 14px; }
+    .pin-display { font-size: 32px; color: #a6e3a1; font-weight: bold; letter-spacing: 5px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+
+<h1>🔑 Tipp10 Bot Control Center (Free Edition)</h1>
+
+<div class="info-box">
+  <strong>Anleitung:</strong><br>
+  1. Kopiere das <strong>Konsolen / Tampermonkey-Script</strong> unten auf dein iPhone.<br>
+  2. Der Bot bleibt nach Aktivierung noch 3 zusätzliche Minuten aktiv, bevor er automatisch sperrt.
+</div>
+
+<h2>1. Aktuelle Live-PIN</h2>
+<div id="pinBox" class="pin-display">------</div>
+<button onclick="copyPIN()">🔑 PIN kopieren</button>
+
+<h2>2. Tampermonkey / Konsolen-Script</h2>
+<pre id="scriptBox">Generiere Script...</pre>
+<button onclick="copyScript()">📋 Script kopieren</button>
+
+<script>
+  const SECRET_SEED = 987654321; 
+
+  function generatePIN(minutesTimestamp) {
+    let hash = (minutesTimestamp ^ SECRET_SEED) * 16777619;
+    hash = Math.abs(hash ^ (hash >>> 16));
+    let pin = hash % 1000000;
+    return String(pin).padStart(6, '0');
+  }
+
+  function updateGenerator() {
+    const currentMinuteTimestamp = Math.floor(Date.now() / 60000);
+    document.getElementById("pinBox").textContent = generatePIN(currentMinuteTimestamp);
+
+    const fullScript = `// ==UserScript==
+// @name         Tipp10 Pro-Bot Free Edition v5.3
+// @namespace    http://tampermonkey.net/
+// @version      5.3
+// @description  Bot mit 3 Minuten Kick-Verzögerung nach PIN-Ablauf
+// @author       Linus Drebes
+// @match        *://*.tipp10.com/*
+// @grant        none
+// ==/UserScript==
+
+(async function() {
+    'use strict';
+
+    const SECRET_SEED = ${SECRET_SEED};
+
+    let running = false;
+    let speed = 300; 
+    let botTimeout = null;
+    let isUnlocked = false;
+    let activePinInterval = null;
+
+    function generatePIN(minutesTimestamp) {
+        let hash = (minutesTimestamp ^ SECRET_SEED) * 16777619;
+        hash = Math.abs(hash ^ (hash >>> 16));
+        let pin = hash % 1000000;
+        return String(pin).padStart(6, '0');
+    }
+
+    const style = document.createElement('style');
+    style.innerHTML = \`
+        #bot-panel {
+            position: fixed; top: 100px; left: 50px; width: 220px;
+            background: #1e1e2e; color: #cdd6f4; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-family: 'Segoe UI', Tahoma, sans-serif;
+            z-index: 99999; border: 1px solid #45475a; overflow: hidden;
+        }
+        #bot-header { background: #313244; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #45475a; }
+        #bot-content { padding: 15px; }
+        .bot-title { font-size: 11px; font-weight: bold; color: #89b4fa; letter-spacing: 1px; text-transform: uppercase; }
+        #bot-close { cursor: pointer; color: #f38ba8; font-weight: bold; padding: 0 5px; }
+        .switch-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #45475a; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #a6e3a1; }
+        input:checked + .slider:before { transform: translateX(18px); }
+        .setting-label { font-size: 11px; color: #bac2de; margin-bottom: 5px; display: block; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #89b4fa; }
+        #speed-val { font-weight: bold; color: #f9e2af; float: right; }
+        #bot-status { margin-top: 15px; padding: 8px; background: #181825; border-radius: 6px; font-size: 10px; text-align: center; font-family: monospace; }
+        
+        .key-input-field { width: 100%; padding: 8px; background: #313244; border: 1px solid #45475a; color: #cdd6f4; border-radius: 4px; font-size: 14px; margin-bottom: 8px; box-sizing: border-box; text-align: center; }
+        .key-submit-btn { width: 100%; padding: 6px; background: #facc15; border: none; color: #11111b; font-weight: bold; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        .disabled-overlay { opacity: 0.3; pointer-events: none; }
+    \`;
+    document.head.appendChild(style);   
+
+    const panel = document.createElement('div');
+    panel.id = 'bot-panel';
+    panel.innerHTML = \`
+        <div id="bot-header">
+            <span class="bot-title">TIPP10 BOT v5.3 (FREE)</span>
+            <span id="bot-close">✕</span>
+        </div>
+        <div id="bot-content">
+            <div id="key-section">
+                <input type="number" id="bot-key-input" class="key-input-field" placeholder="6-stellige PIN">
+                <button id="bot-key-submit" class="key-submit-btn">AKTIVIEREN</button>
+            </div>
+            <div id="controls-section" class="disabled-overlay">
+                <div class="switch-container">
+                    <span style="font-size: 13px;">Status:</span>
+                    <label class="switch">
+                        <input type="checkbox" id="bot-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <span class="setting-label">SPEED (APM): <span id="speed-val">300</span></span>
+                <input type="range" id="bot-speed" min="25" max="1000" value="300">
+            </div>
+            <div id="bot-status">PIN SPERRE</div>
+        </div>
+\`;
+    document.body.appendChild(panel);
+
+    const toggle = panel.querySelector('#bot-toggle');
+    const speedSlider = panel.querySelector('#bot-speed');
+    const speedDisplay = panel.querySelector('#speed-val');
+    const statusBox = panel.querySelector('#bot-status');
+    const closeBtn = panel.querySelector('#bot-close');
+    
+    const keySection = panel.querySelector('#key-section');
+    const controlsSection = panel.querySelector('#controls-section');
+    const keyInput = panel.querySelector('#bot-key-input');
+    const keySubmit = panel.querySelector('#bot-key-submit');
+
+    keySubmit.onclick = () => {
+        const userInput = keyInput.value.trim();
+        if (userInput.length !== 6) {
+            statusBox.textContent = "❌ NUR 6 ZIFFERN";
+            return;
+        }
+
+        const exactCurrentMinute = Math.floor(Date.now() / 60000);
+        
+        const pinPast = generatePIN(exactCurrentMinute - 1);
+        const pinPresent = generatePIN(exactCurrentMinute);
+        const pinFuture = generatePIN(exactCurrentMinute + 1);
+
+        if (userInput === pinPresent || userInput === pinPast || userInput === pinFuture) {
+            isUnlocked = true;
+            keySection.style.display = 'none';
+            controlsSection.classList.remove('disabled-overlay');
+            statusBox.textContent = "READY TO TYPE";
+            statusBox.style.color = '#a6e3a1';
+
+            clearInterval(activePinInterval);
+            activePinInterval = setInterval(() => {
+                const liveMinute = Math.floor(Date.now() / 60000);
+                
+                // Erweitertes Toleranzfenster: Erlaubt zusätzlich die letzten 3 abgelaufenen Minuten
+                const matchPresent = (userInput === generatePIN(liveMinute));
+                const matchPast1 = (userInput === generatePIN(liveMinute - 1));
+                const matchPast2 = (userInput === generatePIN(liveMinute - 2));
+                const matchPast3 = (userInput === generatePIN(liveMinute - 3));
+                const matchPast4 = (userInput === generatePIN(liveMinute - 4)); // Puffer für Server-Uhrzeit
+                const matchFuture = (userInput === generatePIN(liveMinute + 1));
+
+                if (!matchPresent && !matchPast1 && !matchPast2 && !matchPast3 && !matchPast4 && !matchFuture) {
+                    isUnlocked = false;
+                    running = false;
+                    clearTimeout(botTimeout);
+                    toggle.checked = false;
+                    keySection.style.display = 'block';
+                    controlsSection.classList.add('disabled-overlay');
+                    statusBox.textContent = "⏳ FREE-PIN ABGELAUFEN (3 MIN RECHNERISCH)";
+                    statusBox.style.color = '#f38ba8';
+                    keyInput.value = "";
+                    clearInterval(activePinInterval);
+                }
+            }, 5000); 
+        } else {
+            statusBox.textContent = "❌ PIN FALSCH / ABGELAUFEN";
+            statusBox.style.color = '#f38ba8';
+        }
+    };
+
+    let isDragging = false, offset = [0,0];
+    panel.querySelector('#bot-header').onmousedown = (e) => { isDragging = true; offset = [panel.offsetLeft - e.clientX, panel.offsetTop - e.clientY]; };
+    document.onmousemove = (e) => { if (isDragging) { panel.style.left = (e.clientX + offset[0]) + 'px'; panel.style.top = (e.clientY + offset[1]) + 'px'; } };
+    document.onmouseup = () => isDragging = false;
+
+    speedSlider.oninput = () => { if (!isUnlocked) return; speed = parseInt(speedSlider.value); speedDisplay.textContent = speed; };
+    closeBtn.onclick = () => { running = false; clearTimeout(botTimeout); clearInterval(activePinInterval); panel.remove(); style.remove(); };
+
+    function fire(char) {
+        if (!char) return;
+        const target = document.activeElement?.tagName !== 'BODY' ? document.activeElement : (document.querySelector('input[type=text], textarea, [contenteditable]') || document.body);
+        let key = char, code = char.charCodeAt(0);
+        if (char === '↵' || char === '\\n') { key = 'Enter'; code = 13; }
+        else if (char === ' ' || char === '\\u00A0') { key = ' '; code = 32; }
+        const eventOptions = { key: key, code: code, keyCode: code, which: code, charCode: code, bubbles: true, cancelable: true };
+        target.dispatchEvent(new KeyboardEvent('keydown', eventOptions));
+        target.dispatchEvent(new KeyboardEvent('keypress', eventOptions));
+        target.dispatchEvent(new InputEvent('input', { data: key, inputType: 'insertText', bubbles: true }));
+        target.dispatchEvent(new KeyboardEvent('keyup', eventOptions));
+    }
+
+    function getChar() { const selection = document.getElementById('selection'); return selection ? selection.textContent[0] : null; }
+
+    function loop() {
+        if (!running || !isUnlocked) return;
+        const char = getChar();
+        if (char) { fire(char); statusBox.textContent = \`⚡ \${char} | \${speed} APM\`; statusBox.style.color = '#a6e3a1'; }
+        else { statusBox.textContent = "⏳ WAITING"; statusBox.style.color = '#f9e2af'; }
+        botTimeout = setTimeout(loop, Math.max(0.1, 60000 / speed));
+    }
+
+    toggle.onchange = () => {
+        if (!isUnlocked) { toggle.checked = false; return; }
+        running = toggle.checked;
+        if (running) { const inp = document.querySelector('input[type=text], textarea, [contenteditable]'); if (inp) inp.focus(); statusBox.textContent = "🚀 STARTING"; statusBox.style.color = '#89b4fa'; loop(); }
+        else { clearTimeout(botTimeout); statusBox.textContent = "⏹️ STOPPED"; statusBox.style.color = '#f38ba8'; }
+    };
+})();`;
+
+    document.getElementById("scriptBox").textContent = fullScript;
+  }
+
+  updateGenerator();
+  setInterval(updateGenerator, 5000);
+
+  function copyPIN() { navigator.clipboard.writeText(document.getElementById("pinBox").textContent); alert("PIN kopiert!"); }
+  function copyScript() { navigator.clipboard.writeText(document.getElementById("scriptBox").textContent); alert("Skript kopiert!"); }
+</script>
+
+</body>
+</html>
