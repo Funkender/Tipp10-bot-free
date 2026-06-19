@@ -378,42 +378,66 @@
 
 
 
-    <script>
-        function toggleMenu() {
-            document.getElementById('hamburger-btn').classList.toggle('open');
-            document.getElementById('nav-menu').classList.toggle('open');
-        }
+   <script>
+    function toggleMenu() {
+        document.getElementById('hamburger-btn').classList.toggle('open');
+        document.getElementById('nav-menu').classList.toggle('open');
+    }
 
-        // Lädt den globalen Spielstand (identisch mit Shop & Games)
-        let userStats = JSON.parse(localStorage.getItem('portal_stats_v3')) || { coins: 0, rank: 'free' };
+    // Lädt den globalen Spielstand
+    let userStats = JSON.parse(localStorage.getItem('portal_stats_v3')) || { coins: 0, rank: 'free' };
 
-        function updateUI() {
-            document.getElementById('coin-count').innerText = userStats.coins;
-            document.getElementById('user-rank').innerText = userStats.rank.toUpperCase();
-
-            // Wenn Plus oder Premium aktiv ist, schalte den Plus-Download frei
-            if (userStats.rank === 'plus' || userStats.rank === 'premium') {
-                document.getElementById('dl-plus').classList.remove('btn-disabled');
+    // --- ENTWICKLER-FUNKTION (Konsolen-Zugriff) ---
+    // Definiert eine globale Eigenschaft 'konto' auf dem window-Objekt
+    Object.defineProperty(window, 'konto', {
+        get: function() {
+            return userStats.coins;
+        },
+        set: function(value) {
+            let numValue = parseInt(value, 10);
+            if (!isNaN(numValue)) {
+                userStats.coins = numValue;
+                updateUI(); // Aktualisiert die Anzeige sofort
+                console.log(`%c[Dev-Tools] Kontostand auf ${numValue} Münzen aktualisiert.`, "color: #38bdf8; font-weight: bold;");
             }
-            // Wenn Premium aktiv ist, schalte den Premium-Download frei
-            if (userStats.rank === 'premium') {
-                document.getElementById('dl-premium').classList.remove('btn-disabled');
-            }
-            
-            localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
-        }
+        },
+        configurable: true
+    });
+    // ----------------------------------------------
 
-        // Überprüfung beim Klick auf einen geschützten Download
-        function checkDownload(requiredRank) {
-            if (requiredRank === 'plus' && (userStats.rank === 'plus' || userStats.rank === 'premium')) return true;
-            if (requiredRank === 'premium' && userStats.rank === 'premium') return true;
-            
-            alert(`Sperre aktiv! Du brauchst den ${requiredRank.toUpperCase()}-Rang. Spiele in der Arcade, um Münzen zu sammeln und kaufe ihn im Shop!`);
-            return false;
-        }
+    function updateUI() {
+        document.getElementById('coin-count').innerText = userStats.coins;
+        document.getElementById('user-rank').innerText = userStats.rank.toUpperCase();
 
-        // Initialer Start
-        updateUI();
-    </script>
+        // Wenn Plus oder Premium aktiv ist, schalte den Plus-Download frei
+        if (userStats.rank === 'plus' || userStats.rank === 'premium') {
+            document.getElementById('dl-plus').classList.remove('btn-disabled');
+        } else {
+            document.getElementById('dl-plus').classList.add('btn-disabled');
+        }
+        
+        // Wenn Premium aktiv ist, schalte den Premium-Download frei
+        if (userStats.rank === 'premium') {
+            document.getElementById('dl-premium').classList.remove('btn-disabled');
+        } else {
+            document.getElementById('dl-premium').classList.add('btn-disabled');
+        }
+        
+        localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
+    }
+
+    // Überprüfung beim Klick auf einen geschützten Download
+    function checkDownload(requiredRank) {
+        if (requiredRank === 'plus' && (userStats.rank === 'plus' || userStats.rank === 'premium')) return true;
+        if (requiredRank === 'premium' && userStats.rank === 'premium') return true;
+        
+        alert(`Sperre aktiv! Du brauchst den ${requiredRank.toUpperCase()}-Rang. Spiele in der Arcade, um Münzen zu sammeln und kaufe ihn im Shop!`);
+        return false;
+    }
+
+    // Initialer Start
+    updateUI();
+</script>
+
 </body>
 </html>
