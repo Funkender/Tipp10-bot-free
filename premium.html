@@ -55,7 +55,7 @@
 // @name         Tipp10 Pro-Bot Premium Edition v4.7
 // @namespace    http://tampermonkey.net/
 // @version      4.7
-// @description  Bot ohne UI - Steuerung über Konsole mit unbegrenzter APM-Kapazität
+// @description  Bot ohne UI - Steuerung über Konsole mit unbegrenzter APM-Kapazität (Hardware-Limit)
 // @author       Linus Drebes
 // @match        *://*.tipp10.com/*
 // @grant        none
@@ -70,6 +70,9 @@
     let speed = 300; 
     let botTimeout = null;
     let isUnlocked = false;
+
+    let lastTick = performance.now();
+    let accumulatedChars = 0;
 
     function generatePIN(minutesTimestamp) {
         let hash = (minutesTimestamp ^ SECRET_SEED) * 16777619;
@@ -96,20 +99,25 @@
     function loop() {
         if (!running || !isUnlocked) return;
         
-        // Optimierung für extreme APM: Versucht bei sehr hohen Werten mehrere Zeichen im selben Event-Loop-Durchlauf zu senden
-        let batchSize = Math.ceil(speed / 12000); 
-        for (let i = 0; i < batchSize; i++) {
+        const now = performance.now();
+        const deltaMs = now - lastTick;
+        lastTick = now;
+
+        const charsPerMillisecond = speed / 60000;
+        accumulatedChars += deltaMs * charsPerMillisecond;
+
+        while (accumulatedChars >= 1 && running) {
             const char = getChar();
             if (char) { 
                 fire(char); 
+                accumulatedChars--;
             } else { 
+                accumulatedChars = 0;
                 break;
             }
         }
         
-        // Berechnet die Verzögerung basierend auf der gewünschten APM
-        let delay = 60000 / speed;
-        botTimeout = setTimeout(loop, Math.max(0, delay));
+        botTimeout = setTimeout(loop, speed > 10000 ? 1 : 10);
     }
 
     window.bot = {
@@ -134,6 +142,8 @@
             const inp = document.querySelector('input[type=text], textarea, [contenteditable]'); 
             if (inp) inp.focus();
             console.log("🚀 BOT GESTARTET mit " + speed + " APM");
+            lastTick = performance.now();
+            accumulatedChars = 0;
             loop();
         },
         stop: function() {
