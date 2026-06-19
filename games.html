@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Münzen Arcade</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(45deg, #0f172a, #1e1b4b, #2e1065, #0f172a);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #f8fafc;
+            padding-top: 90px;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        h1 { text-align: center; font-size: 2.5rem; background: linear-gradient(to right, #06b6d4, #fde047); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #94a3b8; margin-bottom: 30px; }
+
+        /* --- Navbar --- */
+        .navbar { position: fixed; top: 0; left: 0; width: 100%; height: 70px; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; z-index: 1000; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .logo { font-weight: bold; font-size: 1.3rem; background: linear-gradient(to right, #06b6d4, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hamburger { display: flex; flex-direction: column; justify-content: space-between; width: 30px; height: 20px; cursor: pointer; z-index: 1001; }
+        .hamburger span { display: block; height: 3px; width: 100%; background-color: #fff; border-radius: 3px; transition: all 0.3s ease; }
+        .hamburger.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+        .nav-menu { position: fixed; top: 0; right: -100%; width: 250px; height: 100vh; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: -10px 0 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; padding: 100px 30px; gap: 25px; transition: right 0.4s cubic-bezier(0.1, 1, 0.1, 1); z-index: 999; }
+        .nav-menu.open { right: 0; }
+        .nav-menu a { color: #94a3b8; text-decoration: none; font-size: 1.2rem; font-weight: 500; }
+        .nav-menu a:hover, .nav-menu a.active { color: #38bdf8; }
+
+        .wallet-display { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 25px; border-radius: 30px; margin: 0 auto 30px auto; width: max-content; font-size: 1.1rem; }
+
+        /* --- Layout Container --- */
+        .arcade-container { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .game-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 25px; width: 340px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); }
+        .game-card h3 { margin-bottom: 5px; font-size: 1.4rem; color: #38bdf8; }
+        .game-reward { font-size: 0.8rem; color: #94a3b8; margin-bottom: 15px; text-align: center; line-height: 1.4; }
+        .reward-plus { color: #2ecc71; font-weight: bold; }
+        .reward-minus { color: #e74c3c; font-weight: bold; }
+
+        /* --- TIC TAC TOE STYLE --- */
+        .ttt-board { display: grid; grid-template-columns: repeat(3, 90px); grid-template-rows: repeat(3, 90px); gap: 5px; margin-bottom: 15px; }
+        .ttt-cell { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; font-weight: bold; cursor: pointer; }
+        .ttt-cell.X { color: #0ea5e9; text-shadow: 0 0 10px #0ea5e9; }
+        .ttt-cell.O { color: #ec4899; text-shadow: 0 0 10px #ec4899; }
+
+        /* --- 4 GEWINNT STYLE --- */
+        .connect-board { display: grid; grid-template-columns: repeat(7, 32px); grid-template-rows: repeat(6, 32px); gap: 4px; background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 15px; }
+        .connect-cell { background: #1e293b; border-radius: 50%; cursor: pointer; }
+        .connect-cell.p1 { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+        .connect-cell.p2 { background: #eab308; box-shadow: 0 0 8px #eab308; }
+
+        /* --- CHROME RUNNER STYLE --- */
+        .runner-container { position: relative; width: 100%; height: 150px; background: rgba(0, 0, 0, 0.3); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden; margin-bottom: 15px; cursor: pointer; }
+        #runner-canvas { width: 100%; height: 100%; display: block; }
+        .runner-info { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.4); font-size: 0.85rem; text-align: center; pointer-events: none; }
+
+        .btn-reset { background: rgba(255, 255, 255, 0.1); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; margin-top: auto; }
+        .btn-reset:hover { background: rgba(255, 255, 255, 0.2); }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo">COIN PORTAL</div>
+        <div class="hamburger" id="hamburger-btn" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
+        </div>
+    </nav>
+
+    <div class="nav-menu" id="nav-menu">
+        <a href="index.html">Downloads</a>
+        <a href="games.html" class="active">Mini-Games</a>
+        <a href="shop.html">Münzen-Shop</a>
+    </div>
+
+    <h1>Münzen Arcade</h1>
+    <p class="subtitle">Zocke Mini-Games. Gewinne bringen Münzen, Verluste ziehen welche ab!</p>
+
+    <div class="wallet-display">
+        Kontostand: <strong style="color: #fde047;"><span id="coin-count">0</span> 🪙</strong>
+    </div>
+
+    <div class="arcade-container">
+
+        <div class="game-card">
+            <h3>Tic-Tac-Toe</h3>
+            <div class="game-reward">Sieg: <span class="reward-plus">+3 🪙</span> | Lose: <span class="reward-minus">-2 🪙</span></div>
+            <div class="ttt-board" id="ttt-board">
+                <div class="ttt-cell" onclick="playTTT(0)"></div>
+                <div class="ttt-cell" onclick="playTTT(1)"></div>
+                <div class="ttt-cell" onclick="playTTT(2)"></div>
+                <div class="ttt-cell" onclick="playTTT(3)"></div>
+                <div class="ttt-cell" onclick="playTTT(4)"></div>
+                <div class="ttt-cell" onclick="playTTT(5)"></div>
+                <div class="ttt-cell" onclick="playTTT(6)"></div>
+                <div class="ttt-cell" onclick="playTTT(7)"></div>
+                <div class="ttt-cell" onclick="playTTT(8)"></div>
+            </div>
+            <button class="btn-reset" onclick="resetTTT()">Neustart</button>
+        </div>
+
+        <div class="game-card">
+            <h3>Chrome Runner</h3>
+            <div class="game-reward">Pro 100 Score: <span class="reward-plus">+1 🪙</span> | Crash: <span class="reward-minus">-2 🪙</span></div>
+            <div class="runner-container" onclick="runnerJump()">
+                <canvas id="runner-canvas" width="290" height="150"></canvas>
+                <div class="runner-info" id="runner-info">Klicke hier zum Starten & Springen<br><span id="live-score" style="color:#38bdf8; font-weight:bold;">Score: 0</span></div>
+            </div>
+            <button class="btn-reset" onclick="initRunner()">Neustart</button>
+        </div>
+
+        <div class="game-card">
+            <h3>4 Gewinnt</h3>
+            <div class="game-reward">Sieg: <span class="reward-plus">+6 🪙</span> | Lose: <span class="reward-minus">-4 🪙</span></div>
+            <div class="connect-board" id="connect-board"></div>
+            <button class="btn-reset" onclick="resetConnect()">Neustart</button>
+        </div>
+
+    </div>
+
+    <div style="text-align: center; margin: 50px 0 30px 0;">
+        <button onclick="devReset()" style="background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); padding: 10px 20px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: background 0.2s;">
+            ⚙️ Dev Mode: ALLE Daten & Ränge radikal löschen
+        </button>
+    </div>
+
+    <script>
+        function toggleMenu() {
+            document.getElementById('hamburger-btn').classList.toggle('open');
+            document.getElementById('nav-menu').classList.toggle('open');
+        }
+
+        // Lädt den Status oder generiert saubere Startwerte
+        let userStats = JSON.parse(localStorage.getItem('portal_stats_v3')) || { coins: 0, rank: 'free' };
+
+        function updateUI() {
+            if(userStats.coins < 0) userStats.coins = 0; 
+            document.getElementById('coin-count').innerText = userStats.coins;
+            localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
+        }
+
+        // Klick-Sperre für Bot-Züge
+        let botMoving = false;
+
+        // --- DEV RESET FUNKTION (BEREINIGT NUN ALLES) ---
+        function devReset() {
+            if (confirm("Möchtest du wirklich ALLE Daten (Münzen, Ränge, Shop-Käufe) unwiderruflich im Browser löschen?")) {
+                localStorage.clear(); // Löscht den gesamten Speicher restlos
+                alert("Komplett-Reset erfolgreich! Alle Daten wurden vernichtet.");
+                location.reload(); // Erzwingt Neuladen mit frischen Werten
+            }
+        }
+
+        // --- TIC TAC TOE LOGIK ---
+        let tttBoard = ["", "", "", "", "", "", "", "", ""];
+        let tttActive = true;
+
+        function playTTT(cellIndex) {
+            if (tttBoard[cellIndex] !== "" || !tttActive || botMoving) return;
+            
+            tttBoard[cellIndex] = "X";
+            renderTTT();
+            
+            if (checkTTTWin("X")) {
+                alert("Gewonnen! +3 Münzen!");
+                userStats.coins += 3;
+                updateUI();
+                tttActive = false;
+                return;
+            }
+            if (!tttBoard.includes("")) { alert("Unentschieden!"); tttActive = false; return; }
+
+            botMoving = true;
+
+            setTimeout(() => {
+                if (!tttActive) { botMoving = false; return; }
+
+                let emptyCells = tttBoard.map((val, idx) => val === "" ? idx : null).filter(val => val !== null);
+                if (emptyCells.length > 0) {
+                    let randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    tttBoard[randomCell] = "O";
+                    renderTTT();
+                    if (checkTTTWin("O")) {
+                        alert("Verloren! -2 Münzen.");
+                        userStats.coins -= 2;
+                        updateUI();
+                        tttActive = false;
+                    }
+                }
+                botMoving = false;
+            }, 350);
+        }
+
+        function renderTTT() {
+            const cells = document.querySelectorAll('.ttt-cell');
+            tttBoard.forEach((val, idx) => { cells[idx].innerText = val; cells[idx].className = `ttt-cell ${val}`; });
+        }
+
+        function checkTTTWin(p) {
+            const w = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            return w.some(comb => comb.every(idx => tttBoard[idx] === p));
+        }
+
+        function resetTTT() { tttBoard = ["", "", "", "", "", "", "", "", ""]; tttActive = true; botMoving = false; renderTTT(); }
+
+        // --- CHROME RUNNER LOGIK ---
+        const canvas = document.getElementById('runner-canvas');
+        const ctx = canvas.getContext('2d');
+        let runner, obstacles, score, runnerLoop, runnerRunning;
+
+        function initRunner() {
+            cancelAnimationFrame(runnerLoop);
+            runnerRunning = false;
+            score = 0;
+            obstacles = [];
+            runner = { x: 30, y: 110, vy: 0, width: 20, height: 20, jumping: false };
+            document.getElementById('runner-info').style.opacity = "1";
+            document.getElementById('live-score').innerText = "Score: 0";
+            drawRunnerScene();
+        }
+
+        function startRunner() {
+            if (runnerRunning) return;
+            runnerRunning = true;
+            document.getElementById('runner-info').style.opacity = "0.2";
+            updateRunner();
+        }
+
+        function runnerJump() {
+            if (!runnerRunning) { startRunner(); return; }
+            if (!runner.jumping) { runner.vy = -6.5; runner.jumping = true; }
+        }
+
+        function updateRunner() {
+            if (!runnerRunning) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            score++;
+            document.getElementById('live-score').innerText = "Score: " + score;
+            if (score % 100 === 0) { userStats.coins += 1; updateUI(); }
+
+            runner.vy += 0.35;
+            runner.y += runner.vy;
+            if (runner.y >= 110) { runner.y = 110; runner.vy = 0; runner.jumping = false; }
+
+            if (Math.random() < 0.015 && (obstacles.length === 0 || obstacles[obstacles.length - 1].x < 180)) {
+                obstacles.push({ x: 300, y: 115, width: 12, height: 15 });
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].x -= 3;
+                
+                if (runner.x < obstacles[i].x + obstacles[i].width && runner.x + runner.width > obstacles[i].x &&
+                    runner.y < obstacles[i].y + obstacles[i].height && runner.y + runner.height > obstacles[i].y) {
+                    
+                    runnerRunning = false;
+                    alert(`Gecrasht! Score: ${score}. Du verlierst 2 Münzen.`);
+                    userStats.coins -= 2;
+                    updateUI();
+                    initRunner();
+                    return;
+                }
+                if (obstacles[i].x < -20) obstacles.splice(i, 1);
+            }
+
+            drawRunnerScene();
+            runnerLoop = requestAnimationFrame(updateRunner);
+        }
+
+        function drawRunnerScene() {
+            ctx.strokeStyle = "rgba(255,255,255,0.2)";
+            ctx.beginPath(); ctx.moveTo(0, 130); ctx.lineTo(300, 130); ctx.stroke();
+
+            ctx.fillStyle = "#0ea5e9";
+            ctx.shadowBlur = 10; ctx.shadowColor = "#0ea5e9";
+            ctx.fillRect(runner.x, runner.y, runner.width, runner.height);
+
+            ctx.fillStyle = "#ec4899";
+            ctx.shadowColor = "#ec4899";
+            obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.width, obs.height));
+            ctx.shadowBlur = 0; 
+        }
+
+        // --- 4 GEWINNT LOGIK ---
+        const rows = 6; const cols = 7;
+        let connectBoard = Array(rows).fill(null).map(() => Array(cols).fill(0));
+        let connectActive = true;
+
+        function initConnectBoard() {
+            const boardEl = document.getElementById('connect-board');
+            boardEl.innerHTML = "";
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    let cell = document.createElement('div');
+                    cell.className = 'connect-cell';
+                    cell.onclick = () => playConnect(c);
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function playConnect(c) {
+            if (!connectActive || botMoving) return;
+            
+            let r = -1;
+            for (let i = rows - 1; i >= 0; i--) { if (connectBoard[i][c] === 0) { r = i; break; } }
+            if (r === -1) return;
+
+            connectBoard[r][c] = 1;
+            renderConnect();
+
+            if (checkConnectWin(1)) {
+                alert("Gewonnen! +6 Münzen!");
+                userStats.coins += 6;
+                updateUI();
+                connectActive = false;
+                return;
+            }
+
+            botMoving = true;
+
+            setTimeout(() => {
+                if (!connectActive) { botMoving = false; return; }
+
+                let validCols = [];
+                for (let i = 0; i < cols; i++) { if (connectBoard[0][i] === 0) validCols.push(i); }
+                if (validCols.length > 0) {
+                    let botCol = validCols[Math.floor(Math.random() * validCols.length)];
+                    for (let i = rows - 1; i >= 0; i--) { if (connectBoard[i][botCol] === 0) { connectBoard[i][botCol] = 2; break; } }
+                    renderConnect();
+                    if (checkConnectWin(2)) {
+                        alert("Bot gewinnt! Du verlierst 4 Münzen.");
+                        userStats.coins -= 4;
+                        updateUI();
+                        connectActive = false;
+                    }
+                }
+                botMoving = false;
+            }, 350);
+        }
+
+        function renderConnect() {
+            const cells = document.querySelectorAll('.connect-cell');
+            let idx = 0;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    let val = connectBoard[r][c];
+                    cells[idx].className = 'connect-cell' + (val === 1 ? ' p1' : val === 2 ? ' p2' : '');
+                    idx++;
+                }
+            }
+        }
+
+        function checkConnectWin(p) {
+            for (let r=0; r<rows; r++) { for (let c=0; c<cols-3; c++) { if (connectBoard[r][c]===p && connectBoard[r][c+1]===p && connectBoard[r][c+2]===p && connectBoard[r][c+3]===p) return true; } }
+            for (let r=0; r<rows-3; r++) { for (let c=0; c<cols; c++) { if (connectBoard[r][c]===p && connectBoard[r+1][c]===p && connectBoard[r+2][c]===p && connectBoard[r+3][c]===p) return true; } }
+            for (let r=0; r<rows-3; r++) { for (let c=0; c<cols-3; c++) { if (connectBoard[r][c]===p && connectBoard[r+1][c+1]===p && connectBoard[r+2][c+2]===p && connectBoard[r+3][c+3]===p) return true; } }
+            for (let r=3; r<rows; r++) { for (let c=0; c<cols-3; c++) { if (connectBoard[r][c]===p && connectBoard[r-1][c+1]===p && connectBoard[r-2][c+2]===p && connectBoard[r-3][c+3]===p) return true; } }
+            return false;
+        }
+
+        function resetConnect() { connectBoard = Array(rows).fill(null).map(() => Array(cols).fill(0)); connectActive = true; botMoving = false; renderConnect(); }
+
+        // Start
+        updateUI();
+        initConnectBoard();
+        initRunner();
+    </script>
+</body>
+</html>
