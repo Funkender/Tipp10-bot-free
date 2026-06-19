@@ -7,7 +7,7 @@
     body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 30px; background: #0f172a; color: #e5e7eb; max-width: 900px; margin: 0 auto; }
     h1 { color: #c084fc; border-bottom: 2px solid #1e293b; padding-bottom: 10px; }
     h2 { color: #89b4fa; margin-top: 30px; }
-    pre { background: #1e293b; padding: 16px; border-radius: 8px; white-space: pre-wrap; overflow-x: auto; font-family: monospace; font-size: 13px; border: 1px solid #334155; position: relative; }
+    pre { background: #1e293b; padding: 16px; border-radius: 8px; white-space: pre-wrap; overflow-x: auto; font-family: monospace; font-size: 13px; border: 1px solid #334155; position: relative; max-height: 500px; }
     button { background: #c084fc; color: #0f172a; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 15px; transition: background 0.2s; }
     button:hover { background: #a855f7; }
     .info-box { background: #1e1e2e; border-left: 4px solid #c084fc; padding: 12px; margin-bottom: 20px; border-radius: 0 8px 8px 0; font-size: 14px; }
@@ -16,12 +16,13 @@
 </head>
 <body>
 
-<h1>🔑 Tipp10 Bot Control Center (Plus Edition)</h1>
+<h1>🔑 Tipp10 Bot Control Center (Ultimate Edition)</h1>
 
 <div class="info-box">
   <strong>Anleitung:</strong><br>
-  1. Kopiere das <strong>Konsolen / Tampermonkey-Script</strong> und füge es in die firefox konsole ein drücke dazu strg+shift+i oder f12 Dann schreibe Einfügen erlauben und füge es erneut ein.<br>
-  2. Jede PIN läuft nach 60 Sekunden ab. Nach erfolgreichem Login bleibt der Bot dauerhaft aktiv.
+  1. Kopiere das untenstehende <strong>Tampermonkey- / Konsolen-Skript</strong>.<br>
+  2. Füge es entweder in Tampermonkey ein oder öffne auf Tipp10 die Browser-Konsole (F12 bzw. Strg+Shift+I), tippe bei Aufforderung "Einfügen erlauben" ein und füge das Skript ein.<br>
+  3. Nutze die unten angezeigte Live-PIN, um das Menü im Bot freizuschalten. Die PIN aktualisiert sich alle 60 Sekunden.
 </div>
 
 <h2>1. Aktuelle Live-PIN</h2>
@@ -47,10 +48,10 @@
     document.getElementById("pinBox").textContent = generatePIN(currentMinuteTimestamp);
 
     const fullScript = `// ==UserScript==
-// @name         Tipp10 Pro-Bot Plus Edition v4.4
+// @name         Tipp10 Pro-Bot Ultimate Edition v5.0
 // @namespace    http://tampermonkey.net/
-// @version      4.4
-// @description  Bot mit unbegrenzter Nutzungszeit nach erfolgreichem Login
+// @version      5.0
+// @description  Bot ohne APM-Limit (Hardware-Limit) und mit numerischem Eingabefeld
 // @author       Linus Drebes
 // @match        *://*.tipp10.com/*
 // @grant        none
@@ -93,8 +94,6 @@
         input:checked + .slider { background-color: #a6e3a1; }
         input:checked + .slider:before { transform: translateX(18px); }
         .setting-label { font-size: 11px; color: #bac2de; margin-bottom: 5px; display: block; }
-        input[type=range] { width: 100%; cursor: pointer; accent-color: #c084fc; }
-        #speed-val { font-weight: bold; color: #f9e2af; float: right; }
         #bot-status { margin-top: 15px; padding: 8px; background: #181825; border-radius: 6px; font-size: 10px; text-align: center; font-family: monospace; }
         
         .key-input-field { width: 100%; padding: 8px; background: #313244; border: 1px solid #45475a; color: #cdd6f4; border-radius: 4px; font-size: 14px; margin-bottom: 8px; box-sizing: border-box; text-align: center; }
@@ -107,7 +106,7 @@
     panel.id = 'bot-panel';
     panel.innerHTML = \`
         <div id="bot-header">
-            <span class="bot-title">TIPP10 BOT (PLUS)</span>
+            <span class="bot-title">TIPP10 BOT (MAX SPEED)</span>
             <span id="bot-close">✕</span>
         </div>
         <div id="bot-content">
@@ -123,8 +122,8 @@
                         <span class="slider"></span>
                     </label>
                 </div>
-                <span class="setting-label">SPEED (APM): <span id="speed-val">300</span></span>
-                <input type="range" id="bot-speed" min="25" max="1000" value="300">
+                <span class="setting-label">SPEED (APM):</span>
+                <input type="number" id="bot-speed-input" class="key-input-field" value="300" min="1" step="100" style="text-align: left; padding: 5px;">
             </div>
             <div id="bot-status">PIN SPERRE</div>
         </div>
@@ -132,8 +131,7 @@
     document.body.appendChild(panel);
 
     const toggle = panel.querySelector('#bot-toggle');
-    const speedSlider = panel.querySelector('#bot-speed');
-    const speedDisplay = panel.querySelector('#speed-val');
+    const speedInput = panel.querySelector('#bot-speed-input');
     const statusBox = panel.querySelector('#bot-status');
     const closeBtn = panel.querySelector('#bot-close');
     
@@ -158,8 +156,6 @@
             controlsSection.classList.remove('disabled-overlay');
             statusBox.textContent = "READY TO TYPE";
             statusBox.style.color = '#a6e3a1';
-            
-            // Kick-Timeout wurde hier komplett entfernt, die Session bleibt unendlich aktiv.
         } else {
             statusBox.textContent = "❌ PIN FALSCH / ABGELAUFEN";
             statusBox.style.color = '#f38ba8';
@@ -171,7 +167,13 @@
     document.onmousemove = (e) => { if (isDragging) { panel.style.left = (e.clientX + offset[0]) + 'px'; panel.style.top = (e.clientY + offset[1]) + 'px'; } };
     document.onmouseup = () => isDragging = false;
 
-    speedSlider.oninput = () => { if (!isUnlocked) return; speed = parseInt(speedSlider.value); speedDisplay.textContent = speed; };
+    speedInput.oninput = () => { 
+        if (!isUnlocked) return; 
+        let val = parseInt(speedInput.value);
+        if (isNaN(val) || val < 1) val = 1;
+        speed = val; 
+    };
+
     closeBtn.onclick = () => { running = false; clearTimeout(botTimeout); panel.remove(); style.remove(); };
 
     function fire(char) {
@@ -189,19 +191,58 @@
 
     function getChar() { const selection = document.getElementById('selection'); return selection ? selection.textContent[0] : null; }
 
+    let lastTick = performance.now();
+    let accumulatedChars = 0;
+
     function loop() {
         if (!running || !isUnlocked) return;
-        const char = getChar();
-        if (char) { fire(char); statusBox.textContent = \`⚡ \${char} | \${speed} APM\`; statusBox.style.color = '#a6e3a1'; }
-        else { statusBox.textContent = "⏳ WAITING"; statusBox.style.color = '#f9e2af'; }
-        botTimeout = setTimeout(loop, Math.max(0.1, 60000 / speed));
+        
+        const now = performance.now();
+        const deltaMs = now - lastTick;
+        lastTick = now;
+
+        const charsPerMillisecond = speed / 60000;
+        accumulatedChars += deltaMs * charsPerMillisecond;
+
+        while (accumulatedChars >= 1 && running) {
+            const char = getChar();
+            if (char) {
+                fire(char);
+                accumulatedChars--;
+            } else {
+                accumulatedChars = 0;
+                break;
+            }
+        }
+
+        const currentChar = getChar();
+        if (currentChar) {
+            statusBox.textContent = \`⚡ APM: \${speed}\`;
+            statusBox.style.color = '#a6e3a1';
+        } else {
+            statusBox.textContent = "⏳ WAITING / FINISHED";
+            statusBox.style.color = '#f9e2af';
+        }
+
+        botTimeout = setTimeout(loop, speed > 10000 ? 1 : 10);
     }
 
     toggle.onchange = () => {
         if (!isUnlocked) { toggle.checked = false; return; }
         running = toggle.checked;
-        if (running) { const inp = document.querySelector('input[type=text], textarea, [contenteditable]'); if (inp) inp.focus(); statusBox.textContent = "🚀 STARTING"; statusBox.style.color = '#89b4fa'; loop(); }
-        else { clearTimeout(botTimeout); statusBox.textContent = "⏹️ STOPPED"; statusBox.style.color = '#f38ba8'; }
+        if (running) { 
+            const inp = document.querySelector('input[type=text], textarea, [contenteditable]'); 
+            if (inp) inp.focus(); 
+            statusBox.textContent = "🚀 STARTING"; 
+            statusBox.style.color = '#89b4fa'; 
+            lastTick = performance.now();
+            accumulatedChars = 0;
+            loop(); 
+        } else { 
+            clearTimeout(botTimeout); 
+            statusBox.textContent = "⏹️ STOPPED"; 
+            statusBox.style.color = '#f38ba8'; 
+        }
     };
 })();`;
 
