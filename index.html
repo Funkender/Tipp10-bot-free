@@ -1,247 +1,419 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>Tipp10 Bot - Free Edition (3 Min Delay Kick)</title>
-  <style>
-    body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 30px; background: #0f172a; color: #e5e7eb; max-width: 900px; margin: 0 auto; }
-    h1 { color: #facc15; border-bottom: 2px solid #1e293b; padding-bottom: 10px; }
-    h2 { color: #89b4fa; margin-top: 30px; }
-    pre { background: #1e293b; padding: 16px; border-radius: 8px; white-space: pre-wrap; overflow-x: auto; font-family: monospace; font-size: 13px; border: 1px solid #334155; position: relative; }
-    button { background: #facc15; color: #0f172a; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 15px; transition: background 0.2s; }
-    button:hover { background: #eab308; }
-    .info-box { background: #1e1e2e; border-left: 4px solid #a6e3a1; padding: 12px; margin-bottom: 20px; border-radius: 0 8px 8px 0; font-size: 14px; }
-    .pin-display { font-size: 32px; color: #a6e3a1; font-weight: bold; letter-spacing: 5px; margin: 10px 0; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>official hansdampf bot website</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(45deg, #0f172a, #1e1b4b, #2e1065, #0f172a);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #f8fafc;
+            overflow-x: hidden;
+            padding-top: 90px;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            background: linear-gradient(to right, #38bdf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+
+        /* --- Navbar & Hamburger --- */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 1.3rem;
+            background: linear-gradient(to right, #06b6d4, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hamburger {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 30px;
+            height: 20px;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .hamburger span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+
+        .nav-menu {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 250px;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            padding: 100px 30px;
+            gap: 25px;
+            transition: right 0.4s cubic-bezier(0.1, 1, 0.1, 1);
+            z-index: 999;
+        }
+
+        .nav-menu.open { right: 0; }
+        .nav-menu a { color: #94a3b8; text-decoration: none; font-size: 1.2rem; font-weight: 500; transition: all 0.2s; }
+        .nav-menu a:hover, .nav-menu a.active { color: #38bdf8; }
+
+        /* --- Glassmorphism Layout --- */
+        .main-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* Dashboard */
+        .dashboard {
+            padding: 25px 40px;
+            text-align: center;
+            margin-bottom: 40px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .stats-text { font-size: 1.1rem; margin: 8px 0; }
+        .highlight { font-weight: bold; color: #38bdf8; }
+
+        /* Downloads Grid */
+        .container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .card {
+            padding: 30px;
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card:hover { transform: translateY(-10px); }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .badge-free { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .badge-plus { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.3); }
+        .badge-premium { background: rgba(234, 179, 8, 0.15); color: #fde047; border: 1px solid rgba(253, 224, 71, 0.3); }
+
+        /* Buttons */
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: auto;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .btn-dl {
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            color: white;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.2);
+        }
+        .btn-dl:hover { box-shadow: 0 0 20px rgba(14, 165, 233, 0.5); }
+
+        .btn-disabled {
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: rgba(255, 255, 255, 0.15) !important;
+            border: 1px solid rgba(255, 255, 255, 0.03) !important;
+            cursor: not-allowed;
+            box-shadow: none !important;
+            transform: none !important;
+        }
+    </style>
 </head>
 <body>
 
-<h1>🔑 Tipp10 Bot Control Center (Free Edition)</h1>
-
-<div class="info-box">
-  <strong>Anleitung:</strong><br>
-  1. Kopiere das <strong>Konsolen / Tampermonkey-Script</strong> unten auf dein iPhone.<br>
-  2. Der Bot bleibt nach Aktivierung noch 3 zusätzliche Minuten aktiv, bevor er automatisch sperrt.
-</div>
-
-<h2>1. Aktuelle Live-PIN</h2>
-<div id="pinBox" class="pin-display">------</div>
-<button onclick="copyPIN()">🔑 PIN kopieren</button>
-
-<h2>2. Tampermonkey / Konsolen-Script</h2>
-<pre id="scriptBox">Generiere Script...</pre>
-<button onclick="copyScript()">📋 Script kopieren</button>
-
-<script>
-  const SECRET_SEED = 987654321; 
-
-  function generatePIN(minutesTimestamp) {
-    let hash = (minutesTimestamp ^ SECRET_SEED) * 16777619;
-    hash = Math.abs(hash ^ (hash >>> 16));
-    let pin = hash % 1000000;
-    return String(pin).padStart(6, '0');
-  }
-
-  function updateGenerator() {
-    const currentMinuteTimestamp = Math.floor(Date.now() / 60000);
-    document.getElementById("pinBox").textContent = generatePIN(currentMinuteTimestamp);
-
-    const fullScript = `// ==UserScript==
-// @name         Tipp10 Pro-Bot Free Edition v5.3
-// @namespace    http://tampermonkey.net/
-// @version      5.3
-// @description  Bot mit 3 Minuten Kick-Verzögerung nach PIN-Ablauf
-// @author       Linus Drebes
-// @match        *://*.tipp10.com/*
-// @grant        none
-// ==/UserScript==
-
-(async function() {
-    'use strict';
-
-    const SECRET_SEED = ${SECRET_SEED};
-
-    let running = false;
-    let speed = 300; 
-    let botTimeout = null;
-    let isUnlocked = false;
-    let activePinInterval = null;
-
-    function generatePIN(minutesTimestamp) {
-        let hash = (minutesTimestamp ^ SECRET_SEED) * 16777619;
-        hash = Math.abs(hash ^ (hash >>> 16));
-        let pin = hash % 1000000;
-        return String(pin).padStart(6, '0');
-    }
-
-    const style = document.createElement('style');
-    style.innerHTML = \`
-        #bot-panel {
-            position: fixed; top: 100px; left: 50px; width: 220px;
-            background: #1e1e2e; color: #cdd6f4; border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-family: 'Segoe UI', Tahoma, sans-serif;
-            z-index: 99999; border: 1px solid #45475a; overflow: hidden;
-        }
-        #bot-header { background: #313244; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #45475a; }
-        #bot-content { padding: 15px; }
-        .bot-title { font-size: 11px; font-weight: bold; color: #89b4fa; letter-spacing: 1px; text-transform: uppercase; }
-        #bot-close { cursor: pointer; color: #f38ba8; font-weight: bold; padding: 0 5px; }
-        .switch-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
-        .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #45475a; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #a6e3a1; }
-        input:checked + .slider:before { transform: translateX(18px); }
-        .setting-label { font-size: 11px; color: #bac2de; margin-bottom: 5px; display: block; }
-        input[type=range] { width: 100%; cursor: pointer; accent-color: #89b4fa; }
-        #speed-val { font-weight: bold; color: #f9e2af; float: right; }
-        #bot-status { margin-top: 15px; padding: 8px; background: #181825; border-radius: 6px; font-size: 10px; text-align: center; font-family: monospace; }
-        
-        .key-input-field { width: 100%; padding: 8px; background: #313244; border: 1px solid #45475a; color: #cdd6f4; border-radius: 4px; font-size: 14px; margin-bottom: 8px; box-sizing: border-box; text-align: center; }
-        .key-submit-btn { width: 100%; padding: 6px; background: #facc15; border: none; color: #11111b; font-weight: bold; border-radius: 4px; cursor: pointer; font-size: 11px; }
-        .disabled-overlay { opacity: 0.3; pointer-events: none; }
-    \`;
-    document.head.appendChild(style);   
-
-    const panel = document.createElement('div');
-    panel.id = 'bot-panel';
-    panel.innerHTML = \`
-        <div id="bot-header">
-            <span class="bot-title">TIPP10 BOT v5.3 (FREE)</span>
-            <span id="bot-close">✕</span>
+    <nav class="navbar">
+        <div class="logo">Hansdampf</div>
+        <div class="hamburger" id="hamburger-btn" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
         </div>
-        <div id="bot-content">
-            <div id="key-section">
-                <input type="number" id="bot-key-input" class="key-input-field" placeholder="6-stellige PIN">
-                <button id="bot-key-submit" class="key-submit-btn">AKTIVIEREN</button>
-            </div>
-            <div id="controls-section" class="disabled-overlay">
-                <div class="switch-container">
-                    <span style="font-size: 13px;">Status:</span>
-                    <label class="switch">
-                        <input type="checkbox" id="bot-toggle">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <span class="setting-label">SPEED (APM): <span id="speed-val">300</span></span>
-                <input type="range" id="bot-speed" min="25" max="1000" value="300">
-            </div>
-            <div id="bot-status">PIN SPERRE</div>
-        </div>
-\`;
-    document.body.appendChild(panel);
+    </nav>
 
-    const toggle = panel.querySelector('#bot-toggle');
-    const speedSlider = panel.querySelector('#bot-speed');
-    const speedDisplay = panel.querySelector('#speed-val');
-    const statusBox = panel.querySelector('#bot-status');
-    const closeBtn = panel.querySelector('#bot-close');
-    
-    const keySection = panel.querySelector('#key-section');
-    const controlsSection = panel.querySelector('#controls-section');
-    const keyInput = panel.querySelector('#bot-key-input');
-    const keySubmit = panel.querySelector('#bot-key-submit');
+    <div class="nav-menu" id="nav-menu">
+        <a href="index.html" class="active">Downloads</a>
+        <a href="games.html">Mini-Games</a>
+        <a href="shop.html">Münzen-Shop</a>
+    </div>
 
-    keySubmit.onclick = () => {
-        const userInput = keyInput.value.trim();
-        if (userInput.length !== 6) {
-            statusBox.textContent = "❌ NUR 6 ZIFFERN";
-            return;
-        }
+    <div class="main-wrapper">
+    <h1>Datei-Downloads</h1>
+    <p class="subtitle">Verdiene Münzen über die Mini-Games, um gesperrte Dateien freizuschalten</p>
 
-        const exactCurrentMinute = Math.floor(Date.now() / 60000);
+    <div class="dashboard glass-panel">
+        <h3>Dein Profil</h3>
+        <p class="stats-text">Münzen auf dem Konto: <span class="highlight" id="coin-count">0</span> 🪙</p>
+        <p class="stats-text">Aktueller Rang-Status: <span class="highlight" id="user-rank">FREE</span></p>
+    </div>
+
+    <div class="container">
         
-        const pinPast = generatePIN(exactCurrentMinute - 1);
-        const pinPresent = generatePIN(exactCurrentMinute);
-        const pinFuture = generatePIN(exactCurrentMinute + 1);
+        <div class="card glass-panel">
+            <span class="badge badge-free">Free Plan</span>
+            <h3>Hansdampf v4.1 Base edition</h3>
+            <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 20px;">
+                Für alle Entdecker und Basis-Nutzer direkt verfügbar.
+            </p>
 
-        if (userInput === pinPresent || userInput === pinPast || userInput === pinFuture) {
-            isUnlocked = true;
-            keySection.style.display = 'none';
-            controlsSection.classList.remove('disabled-overlay');
-            statusBox.textContent = "READY TO TYPE";
-            statusBox.style.color = '#a6e3a1';
+            <!-- Weiterleitung auf basic.html -->
+            <a href="basic.html" class="btn btn-dl">Download</a>
+        </div>
 
-            clearInterval(activePinInterval);
-            activePinInterval = setInterval(() => {
-                const liveMinute = Math.floor(Date.now() / 60000);
-                
-                // Erweitertes Toleranzfenster: Erlaubt zusätzlich die letzten 3 abgelaufenen Minuten
-                const matchPresent = (userInput === generatePIN(liveMinute));
-                const matchPast1 = (userInput === generatePIN(liveMinute - 1));
-                const matchPast2 = (userInput === generatePIN(liveMinute - 2));
-                const matchPast3 = (userInput === generatePIN(liveMinute - 3));
-                const matchPast4 = (userInput === generatePIN(liveMinute - 4)); // Puffer für Server-Uhrzeit
-                const matchFuture = (userInput === generatePIN(liveMinute + 1));
+        <div class="card glass-panel">
+            <span class="badge badge-plus">Plus Rang</span>
+            <h3>Hansdampf v5.4 Lightspeed</h3>
+            <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 20px;">
+                Benötigt den PLUS oder PREMIUM Rang aus dem Händler-Shop.
+            </p>
 
-                if (!matchPresent && !matchPast1 && !matchPast2 && !matchPast3 && !matchPast4 && !matchFuture) {
-                    isUnlocked = false;
-                    running = false;
-                    clearTimeout(botTimeout);
-                    toggle.checked = false;
-                    keySection.style.display = 'block';
-                    controlsSection.classList.add('disabled-overlay');
-                    statusBox.textContent = "⏳ FREE-PIN ABGELAUFEN (3 MIN RECHNERISCH)";
-                    statusBox.style.color = '#f38ba8';
-                    keyInput.value = "";
-                    clearInterval(activePinInterval);
-                }
-            }, 5000); 
-        } else {
-            statusBox.textContent = "❌ PIN FALSCH / ABGELAUFEN";
-            statusBox.style.color = '#f38ba8';
+            <!-- Weiterleitung auf plus.html -->
+            <a id="dl-plus" href="plus.html" class="btn btn-dl btn-disabled" onclick="return checkDownload('plus')">Download</a>
+        </div>
+
+        <div class="card glass-panel">
+            <span class="badge badge-premium">Premium Rang</span>
+            <h3>Hansdampf v1.2 Phantom edition</h3>
+            <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 20px;">
+                Exklusiv nur für PREMIUM Mitglieder zugänglich.
+            </p>
+
+            <!-- Weiterleitung auf premium.html -->
+            <a id="dl-premium" href="premium.html" class="btn btn-dl btn-disabled" onclick="return checkDownload('premium')">Download</a>
+        </div>
+
+
+            </div>
+
+        </div>
+    </div>
+<h1 style="text-align: center;">Was ist Hansdampf und wie benutze ich Hansdampf</h1>
+
+<section class="product-section hansdampf" style="padding: 40px 8%; box-sizing: border-box;">
+  <div class="container" style="max-width: 900px; margin: 0 auto;">
+
+    <h2 style="font-size: 2.2rem; margin-bottom: 20px;">
+      Hansdampf – der extrem moderne Tipp10‑Bot
+    </h2>
+
+    <p style="line-height: 1.6;">
+      Hansdampf ist nicht einfach ein Tipp10‑Bot.
+      <strong>Hansdampf ist die ultimative Evolution des Tippens</strong> –
+      entwickelt für alle, die Geschwindigkeit nicht nur erleben, sondern dominieren wollen.
+    </p>
+
+    <h3 style="margin-top: 35px;">Basemodel – präzise Power</h3>
+    <p style="line-height: 1.6;">
+      Du willst rohe, ungezähmte Geschwindigkeit? Dann schnapp dir das
+      <strong>Basemodel</strong> – ein zuverlässiges Kraftpaket, das dir stabile
+      <strong>1000 APM</strong> liefert, bevor du überhaupt realisierst, dass du angefangen hast zu tippen.
+      Präzise, kraftvoll, kompromisslos.
+    </p>
+
+    <h3 style="margin-top: 35px;">Lightspeed‑Model – jenseits der Physik</h3>
+    <p style="line-height: 1.6;">
+      Du willst Rekorde nicht nur brechen, sondern pulverisieren? Dann brauchst du das
+      <strong>Lightspeed‑Model</strong>.
+      Während Tipp10 bei <strong>101.000 APM</strong> kapituliert, feuert Hansdampf Lightspeed bis zu
+      <strong>300.000 APM</strong> raus.
+      Das ist nicht Geschwindigkeit – das ist ein Angriff auf die Naturgesetze.
+    </p>
+
+    <h3 style="margin-top: 35px;">Phantom‑Edition – unsichtbar, unaufhaltbar</h3>
+    <p style="line-height: 1.6;">
+      Für alle, die im Unterricht oder Büro lieber unsichtbar bleiben:
+      die <strong>Phantom‑Edition</strong>.
+      Feinjustierbare APM, stealth‑optimiert, voll über die Konsole steuerbar.
+      So leise, dass niemand merkt, wie Hansdampf im Hintergrund die Tastatur zum Glühen bringt.
+    </p>
+
+    <p style="margin-top: 45px; font-size: 1.2rem; font-weight: bold; text-align: center;">
+      Starte jetzt rein – und erlebe, wie Hansdampf das Tippen in eine neue Dimension katapultiert.
+    </p>
+
+
+    <!-- Neuer Abschnitt -->
+    <h2 style="font-size: 2rem; margin-top: 70px;">
+      Wie benutze ich Hansdampf?
+    </h2>
+
+    <p style="line-height: 1.6;">
+      Keine Sorge – Hansdampf zu starten ist super einfach. Hier ist die komplette Anleitung,
+      Schritt für Schritt erklärt.
+    </p>
+
+    <h3 style="margin-top: 30px;">1. Auf „Download“ klicken</h3>
+    <p style="line-height: 1.6;">
+      Zuerst gehst du auf den <strong>Download‑Button</strong> auf der Seite.  
+      Dadurch kommst du auf eine neue Seite, auf der du das Skript bekommst.
+    </p>
+
+    <h3 style="margin-top: 30px;">2. Auf „Copy Script“ drücken</h3>
+    <p style="line-height: 1.6;">
+      Auf der neuen Seite findest du den Button <strong>„Copy Script“</strong>.  
+      Ein Klick – und der komplette Code wird automatisch in deine Zwischenablage kopiert.
+    </p>
+
+    <h3 style="margin-top: 30px;">3. Firefox Konsole öffnen</h3>
+    <p style="line-height: 1.6;">
+      Öffne Tipp10 im Browser und drücke dann:  
+      <strong>STRG + SHIFT + K</strong>  
+      (das öffnet die Firefox Entwickler‑Konsole).
+      <br>
+      Dort fügst du das kopierte Skript einfach ein und bestätigst mit Enter. Falls das nicht geht schreibst du einfach Einfügen erlauben in die Konsole genau so auch groß klein schreibung usw beachten dann sollte ein Fehler kommen aber die Konsole dennoch entsperrt sein aldo kopiere das script erneut rein um ihn zu starten.
+    </p>
+
+    <h3 style="margin-top: 30px;">4. Live‑PIN eingeben</h3>
+    <p style="line-height: 1.6;">
+      Nach dem Start fragt Hansdampf dich nach deinem <strong>Live‑PIN</strong>.  
+      Diesen findest du direkt auf der Seite, auf der du das Skript kopiert hast.  
+      Kopiere ihn, füge ihn in der Konsole ein – und schon wird der Bot freigeschaltet.
+    </p>
+
+    <p style="margin-top: 40px; font-size: 1.2rem; font-weight: bold; text-align: center;">
+      Und das war’s – Hansdampf ist bereit, deine Tastatur in ein Hochgeschwindigkeits‑Kraftwerk zu verwandeln.
+    </p>
+
+  </div>
+</section>
+
+
+
+
+   
+
+
+
+
+    <script>
+        function toggleMenu() {
+            document.getElementById('hamburger-btn').classList.toggle('open');
+            document.getElementById('nav-menu').classList.toggle('open');
         }
-    };
 
-    let isDragging = false, offset = [0,0];
-    panel.querySelector('#bot-header').onmousedown = (e) => { isDragging = true; offset = [panel.offsetLeft - e.clientX, panel.offsetTop - e.clientY]; };
-    document.onmousemove = (e) => { if (isDragging) { panel.style.left = (e.clientX + offset[0]) + 'px'; panel.style.top = (e.clientY + offset[1]) + 'px'; } };
-    document.onmouseup = () => isDragging = false;
+        // Lädt den globalen Spielstand (identisch mit Shop & Games)
+        let userStats = JSON.parse(localStorage.getItem('portal_stats_v3')) || { coins: 0, rank: 'free' };
 
-    speedSlider.oninput = () => { if (!isUnlocked) return; speed = parseInt(speedSlider.value); speedDisplay.textContent = speed; };
-    closeBtn.onclick = () => { running = false; clearTimeout(botTimeout); clearInterval(activePinInterval); panel.remove(); style.remove(); };
+        function updateUI() {
+            document.getElementById('coin-count').innerText = userStats.coins;
+            document.getElementById('user-rank').innerText = userStats.rank.toUpperCase();
 
-    function fire(char) {
-        if (!char) return;
-        const target = document.activeElement?.tagName !== 'BODY' ? document.activeElement : (document.querySelector('input[type=text], textarea, [contenteditable]') || document.body);
-        let key = char, code = char.charCodeAt(0);
-        if (char === '↵' || char === '\\n') { key = 'Enter'; code = 13; }
-        else if (char === ' ' || char === '\\u00A0') { key = ' '; code = 32; }
-        const eventOptions = { key: key, code: code, keyCode: code, which: code, charCode: code, bubbles: true, cancelable: true };
-        target.dispatchEvent(new KeyboardEvent('keydown', eventOptions));
-        target.dispatchEvent(new KeyboardEvent('keypress', eventOptions));
-        target.dispatchEvent(new InputEvent('input', { data: key, inputType: 'insertText', bubbles: true }));
-        target.dispatchEvent(new KeyboardEvent('keyup', eventOptions));
-    }
+            // Wenn Plus oder Premium aktiv ist, schalte den Plus-Download frei
+            if (userStats.rank === 'plus' || userStats.rank === 'premium') {
+                document.getElementById('dl-plus').classList.remove('btn-disabled');
+            }
+            // Wenn Premium aktiv ist, schalte den Premium-Download frei
+            if (userStats.rank === 'premium') {
+                document.getElementById('dl-premium').classList.remove('btn-disabled');
+            }
+            
+            localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
+        }
 
-    function getChar() { const selection = document.getElementById('selection'); return selection ? selection.textContent[0] : null; }
+        // Überprüfung beim Klick auf einen geschützten Download
+        function checkDownload(requiredRank) {
+            if (requiredRank === 'plus' && (userStats.rank === 'plus' || userStats.rank === 'premium')) return true;
+            if (requiredRank === 'premium' && userStats.rank === 'premium') return true;
+            
+            alert(`Sperre aktiv! Du brauchst den ${requiredRank.toUpperCase()}-Rang. Spiele in der Arcade, um Münzen zu sammeln und kaufe ihn im Shop!`);
+            return false;
+        }
 
-    function loop() {
-        if (!running || !isUnlocked) return;
-        const char = getChar();
-        if (char) { fire(char); statusBox.textContent = \`⚡ \${char} | \${speed} APM\`; statusBox.style.color = '#a6e3a1'; }
-        else { statusBox.textContent = "⏳ WAITING"; statusBox.style.color = '#f9e2af'; }
-        botTimeout = setTimeout(loop, Math.max(0.1, 60000 / speed));
-    }
-
-    toggle.onchange = () => {
-        if (!isUnlocked) { toggle.checked = false; return; }
-        running = toggle.checked;
-        if (running) { const inp = document.querySelector('input[type=text], textarea, [contenteditable]'); if (inp) inp.focus(); statusBox.textContent = "🚀 STARTING"; statusBox.style.color = '#89b4fa'; loop(); }
-        else { clearTimeout(botTimeout); statusBox.textContent = "⏹️ STOPPED"; statusBox.style.color = '#f38ba8'; }
-    };
-})();`;
-
-    document.getElementById("scriptBox").textContent = fullScript;
-  }
-
-  updateGenerator();
-  setInterval(updateGenerator, 5000);
-
-  function copyPIN() { navigator.clipboard.writeText(document.getElementById("pinBox").textContent); alert("PIN kopiert!"); }
-  function copyScript() { navigator.clipboard.writeText(document.getElementById("scriptBox").textContent); alert("Skript kopiert!"); }
-</script>
-
+        // Initialer Start
+        updateUI();
+    </script>
 </body>
 </html>
