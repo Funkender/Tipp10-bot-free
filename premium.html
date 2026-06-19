@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Tipp10 Bot - Premium Edition (Max Efficiency)</title>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 30px; background: #0f172a; color: #e5e7eb; max-width: 900px; margin: 0 auto; }
+    h1 { color: #facc15; border-bottom: 2px solid #1e293b; padding-bottom: 10px; text-shadow: 0 0 10px rgba(250, 204, 21, 0.5); }
+    h2 { color: #89b4fa; margin-top: 30px; }
+    pre { background: #1e293b; padding: 16px; border-radius: 8px; white-space: pre-wrap; overflow-x: auto; font-family: monospace; font-size: 13px; border: 1px solid #facc15; position: relative; }
+    button { background: #facc15; color: #0f172a; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 15px; transition: background 0.2s; box-shadow: 0 0 8px rgba(250, 204, 21, 0.3); }
+    button:hover { background: #eab308; box-shadow: 0 0 12px rgba(234, 179, 8, 0.5); }
+    .info-box { background: #1e1e2e; border-left: 4px solid #facc15; padding: 12px; margin-bottom: 20px; border-radius: 0 8px 8px 0; font-size: 14px; }
+    .pin-display { font-size: 32px; color: #facc15; font-weight: bold; letter-spacing: 5px; margin: 10px 0; text-shadow: 0 0 10px rgba(250, 204, 21, 0.4); }
+  </style>
+</head>
+<body>
+
+<h1>🔑 Tipp10 Bot Control Center (Premium Edition - Console Only)</h1>
+
+<div class="info-box">
+  <strong>Anleitung:</strong><br>
+  1. Kopiere das <strong>Konsolen-Script</strong> und füge es in die Firefox-Konsole ein.<br>
+  2. Jede PIN läuft nach 60 Sekunden ab. Nach erfolgreichem Login bleibt der Bot dauerhaft aktiv.<br>
+  3. <strong>Bedienung in der Konsole:</strong><br>
+  • Aktivieren mit: <code>bot.login("DEINE_PIN")</code><br>
+  • APM ändern mit: <code>bot.apm = 100000</code><br>
+  • Starten mit: <code>bot.start()</code><br>
+  • Stoppen mit: <code>bot.stop()</code>
+</div>
+
+<h2>1. Aktuelle Live-PIN</h2>
+<div id="pinBox" class="pin-display">------</div>
+<button onclick="copyPIN()">🔑 PIN kopieren</button>
+
+<h2>2. Tampermonkey / Konsolen-Script</h2>
+<button onclick="copyScript()">📋 Script kopieren</button>
+<pre id="scriptBox">Generiere Script...</pre>
+
+<script>
+  const SECRET_SEED = 876543219; 
+
+  function generatePIN(minutesTimestamp) {
+    let hash = (minutesTimestamp ^ SECRET_SEED) * 16777619;
+    hash = Math.abs(hash ^ (hash >>> 16));
+    let pin = hash % 1000000;
+    return String(pin).padStart(6, '0');
+  }
+
+  function updateGenerator() {
+    const currentMinuteTimestamp = Math.floor(Date.now() / 60000);
+    document.getElementById("pinBox").textContent = generatePIN(currentMinuteTimestamp);
+
+    const fullScript = `// ==UserScript==
+// @name         Tipp10 Pro-Bot Premium Edition v4.7
+// @namespace    http://tampermonkey.net/
+// @version      4.7
+// @description  Bot ohne UI - Steuerung über Konsole mit unbegrenzter APM-Kapazität
+// @author       Linus Drebes
+// @match        *://*.tipp10.com/*
+// @grant        none
+// ==/UserScript==
+
+(async function() {
+    'use strict';
+
+    const SECRET_SEED = ${SECRET_SEED};
+
+    let running = false;
+    let speed = 300; 
+    let botTimeout = null;
+    let isUnlocked = false;
+
+    function generatePIN(minutesTimestamp) {
+        let hash = (minutesTimestamp ^ SECRET_SEED) * 16777619;
+        hash = Math.abs(hash ^ (hash >>> 16));
+        let pin = hash % 1000000;
+        return String(pin).padStart(6, '0');
+    }
+
+    function fire(char) {
+        if (!char) return;
+        const target = document.activeElement?.tagName !== 'BODY' ? document.activeElement : (document.querySelector('input[type=text], textarea, [contenteditable]') || document.body);
+        let key = char, code = char.charCodeAt(0);
+        if (char === '↵' || char === '\\n') { key = 'Enter'; code = 13; }
+        else if (char === ' ' || char === '\\u00A0') { key = ' '; code = 32; }
+        const eventOptions = { key: key, code: code, keyCode: code, which: code, charCode: code, bubbles: true, cancelable: true };
+        target.dispatchEvent(new KeyboardEvent('keydown', eventOptions));
+        target.dispatchEvent(new KeyboardEvent('keypress', eventOptions));
+        target.dispatchEvent(new InputEvent('input', { data: key, inputType: 'insertText', bubbles: true }));
+        target.dispatchEvent(new KeyboardEvent('keyup', eventOptions));
+    }
+
+    function getChar() { const selection = document.getElementById('selection'); return selection ? selection.textContent[0] : null; }
+
+    function loop() {
+        if (!running || !isUnlocked) return;
+        
+        // Optimierung für extreme APM: Versucht bei sehr hohen Werten mehrere Zeichen im selben Event-Loop-Durchlauf zu senden
+        let batchSize = Math.ceil(speed / 12000); 
+        for (let i = 0; i < batchSize; i++) {
+            const char = getChar();
+            if (char) { 
+                fire(char); 
+            } else { 
+                break;
+            }
+        }
+        
+        // Berechnet die Verzögerung basierend auf der gewünschten APM
+        let delay = 60000 / speed;
+        botTimeout = setTimeout(loop, Math.max(0, delay));
+    }
+
+    window.bot = {
+        login: function(pin) {
+            const exactCurrentMinute = Math.floor(Date.now() / 60000);
+            const pinPresent = generatePIN(exactCurrentMinute);
+
+            if (String(pin).trim() === pinPresent) {
+                isUnlocked = true;
+                console.log("✅ LOGIN ERFOLGREICH! Nutze 'bot.start()' zum Tippen.");
+            } else {
+                console.log("❌ PIN FALSCH ODER BEREITS ABGELAUFEN.");
+            }
+        },
+        start: function() {
+            if (!isUnlocked) {
+                console.log("❌ ZUERST EINLOGGEN MIT: bot.login('PIN')");
+                return;
+            }
+            if (running) return;
+            running = true;
+            const inp = document.querySelector('input[type=text], textarea, [contenteditable]'); 
+            if (inp) inp.focus();
+            console.log("🚀 BOT GESTARTET mit " + speed + " APM");
+            loop();
+        },
+        stop: function() {
+            running = false;
+            clearTimeout(botTimeout);
+            console.log("⏹️ BOT GESTOPPT");
+        },
+        get apm() {
+            return speed;
+        },
+        set apm(val) {
+            let num = parseInt(val);
+            if (!isNaN(num) && num > 0) {
+                speed = num;
+                console.log(\`⚙️ APM geändert auf: \${speed}\`);
+            } else {
+                console.log("❌ Ungültiger APM-Wert");
+            }
+        }
+    };
+
+    console.log("🔑 TIPP10 BOT (PREMIUM CONSOLE EDITION) GELADEN");
+    console.log("Verwendung: bot.login('DEINE_PIN') -> bot.apm = 100000 -> bot.start()");
+})();`;
+
+    document.getElementById("scriptBox").textContent = fullScript;
+  }
+
+  updateGenerator();
+  setInterval(updateGenerator, 5000);
+
+  function copyPIN() { navigator.clipboard.writeText(document.getElementById("pinBox").textContent); alert("PIN kopiert!"); }
+  function copyScript() { navigator.clipboard.writeText(document.getElementById("scriptBox").textContent); alert("Skript kopiert!"); }
+</script>
+
+</body>
+</html>
