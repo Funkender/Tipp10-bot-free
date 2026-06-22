@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade - 4 Gewinnt</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { min-height: 100vh; background: linear-gradient(45deg, #0f172a, #1e1b4b, #2e1065, #0f172a); background-size: 400% 400%; animation: gradientBG 15s ease infinite; color: #f8fafc; padding-top: 90px; display: flex; flex-direction: column; align-items: center; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        
+        .game-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 25px; width: 360px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); margin-top: 10px; }
+        h3 { margin-bottom: 5px; font-size: 1.4rem; color: #38bdf8; }
+        
+        /* --- Schwierigkeits-Regler --- */
+        .difficulty-container { display: flex; gap: 8px; margin-bottom: 15px; width: 100%; }
+        .diff-btn { flex: 1; padding: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #94a3b8; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: all 0.2s; }
+        .diff-btn.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.4); }
+        
+        .game-reward { font-size: 0.8rem; color: #94a3b8; margin-bottom: 15px; text-align: center; height: 35px; }
+        .reward-plus { color: #2ecc71; font-weight: bold; }
+        .reward-minus { color: #e74c3c; font-weight: bold; }
+        
+        .wallet-display { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 25px; border-radius: 30px; margin-bottom: 20px; font-size: 1.1rem; }
+        .btn-back { color: #94a3b8; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .btn-back:hover { color: #fff; }
+
+        .connect-board { display: grid; grid-template-columns: repeat(7, 34px); grid-template-rows: repeat(6, 34px); gap: 5px; background: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 15px; }
+        .connect-cell { background: #1e293b; border-radius: 50%; cursor: pointer; transition: background 0.1s; }
+        .connect-cell.p1 { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+        .connect-cell.p2 { background: #eab308; box-shadow: 0 0 8px #eab308; }
+        
+        .btn-reset { background: rgba(255, 255, 255, 0.1); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .btn-reset:hover { background: rgba(255, 255, 255, 0.2); }
+    </style>
+</head>
+<body>
+
+    <a href="games.html" class="btn-back">⬅ Zurück zur Übersicht</a>
+
+    <div class="wallet-display">
+        Kontostand: <strong style="color: #fde047;"><span id="coin-count">0</span> 🪙</strong>
+    </div>
+
+    <div class="game-card">
+        <h3>4 Gewinnt</h3>
+        
+        <div class="difficulty-container">
+            <button class="diff-btn" id="diff-easy" onclick="setDifficulty('easy')">Easy</button>
+            <button class="diff-btn" id="diff-medium" onclick="setDifficulty('medium')">Mittel</button>
+            <button class="diff-btn" id="diff-hard" onclick="setDifficulty('hard')">Schwer</button>
+        </div>
+
+        <div class="game-reward" id="reward-text">
+            </div>
+
+        <div class="connect-board" id="connect-board"></div>
+        <button class="btn-reset" onclick="resetConnect()">Neustart</button>
+    </div>
+
+    <script>
+        let userStats = JSON.parse(localStorage.getItem('portal_stats_v3')) || { coins: 0, rank: 'free' };
+        let currentDifficulty = localStorage.getItem('c4_difficulty') || 'medium';
+
+        const rewards = {
+            easy: { win: 1, lose: 3 },
+            medium: { win: 3, lose: 2 },
+            hard: { win: 10, lose: 4 }
+        };
+
+        function updateUI() {
+            if(userStats.coins < 0) userStats.coins = 0; 
+            document.getElementById('coin-count').innerText = userStats.coins;
+            localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
+            
+            const r = rewards[currentDifficulty];
+            document.getElementById('reward-text').innerHTML = `Modus: ${currentDifficulty.toUpperCase()}<br>Sieg: <span class="reward-plus">+${r.win} 🪙</span> | Lose: <span class="reward-minus">-${r.lose} 🪙</span>`;
+            
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`diff-${currentDifficulty}`).classList.add('active');
+        }
+
+        function setDifficulty(diff) {
+            if (botMoving) return;
+            currentDifficulty = diff;
+            localStorage.setItem('c4_difficulty', diff);
+            updateUI();
+            resetConnect();
+        }
+
+        const rows = 6; const cols = 7;
+        let connectBoard = Array(rows).fill(null).map(() => Array(cols).fill(0));
+        let connectActive = true;
+        let botMoving = false;
+
+        function initConnectBoard() {
+            const boardEl = document.getElementById('connect-board');
+            boardEl.innerHTML = "";
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    let cell = document.createElement('div');
+                    cell.className = 'connect-cell';
+                    cell.onclick = () => playConnect(c);
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function playConnect(c) {
+            if (!connectActive || botMoving) return;
+            let r = getAvailableRow(c, connectBoard);
+            if (r === -1) return;
+
+            connectBoard[r][c] = 1;
+            renderConnect();
+
+            if (checkConnectWin(1, connectBoard)) { 
+                alert(`Gewonnen! +${rewards[currentDifficulty].win} Münzen!`); 
+                userStats.coins += rewards[currentDifficulty].win; 
+                updateUI(); 
+                connectActive = false; 
+                return; 
+            }
+            
+            if (isBoardFull()) { alert("Unentschieden!"); connectActive = false; return; }
+
+            botMoving = true;
+
+            setTimeout(() => {
+                if (!connectActive) { botMoving = false; return; }
+                makeBotMove();
+                renderConnect();
+                
+                if (checkConnectWin(2, connectBoard)) { 
+                    alert(`Bot gewinnt! Du verlierst ${rewards[currentDifficulty].lose} Münzen.`); 
+                    userStats.coins -= rewards[currentDifficulty].lose; 
+                    updateUI(); 
+                    connectActive = false; 
+                } else if (isBoardFull()) {
+                    alert("Unentschieden!");
+                    connectActive = false;
+                }
+                botMoving = false;
+            }, 400);
+        }
+
+        function getAvailableRow(col, board) {
+            for (let i = rows - 1; i >= 0; i--) { if (board[i][col] === 0) return i; }
+            return -1;
+        }
+
+        function isBoardFull() {
+            for (let c = 0; c < cols; c++) { if (connectBoard[0][c] === 0) return false; }
+            return true;
+        }
+
+        // --- ERWEITERTE INTELLIGENTE KI LOGIK ---
+        function makeBotMove() {
+            let validCols = [];
+            for (let c = 0; c < cols; c++) { if (connectBoard[0][c] === 0) validCols.push(c); }
+            if (validCols.length === 0) return;
+
+            let errorChance = currentDifficulty === 'hard' ? 0.05 : currentDifficulty === 'medium' ? 0.30 : 1.0;
+
+            // Fehler-Faktor: KI zieht rein zufällig (Easy-Verhalten)
+            if (Math.random() < errorChance) {
+                let randomCol = validCols[Math.floor(Math.random() * validCols.length)];
+                let r = getAvailableRow(randomCol, connectBoard);
+                connectBoard[r][randomCol] = 2;
+                return;
+            }
+
+            // 1. OFFENSIV: Kann die KI JETZT direkt mit dem 4. Stein gewinnen?
+            for (let c of validCols) {
+                let tempBoard = connectBoard.map(row => [...row]);
+                let r = getAvailableRow(c, tempBoard);
+                tempBoard[r][c] = 2;
+                if (checkConnectWin(2, tempBoard)) {
+                    connectBoard[r][c] = 2;
+                    return;
+                }
+            }
+
+            // 2. DEFENSIV (Gefahr Stufe 1): Hat der Spieler 3 Steine? Sofort den 4. Stein blockieren!
+            for (let c of validCols) {
+                let tempBoard = connectBoard.map(row => [...row]);
+                let r = getAvailableRow(c, tempBoard);
+                tempBoard[r][c] = 1;
+                if (checkConnectWin(1, tempBoard)) {
+                    connectBoard[r][c] = 2;
+                    return;
+                }
+            }
+
+            // 3. DEFENSIV (Gefahr Stufe 2): Vorausschauende Blockade von 2er-Reihen des Spielers
+            // Verhindert das Entstehen einer "offenen 3er-Reihe"
+            for (let c of validCols) {
+                let tempBoard = connectBoard.map(row => [...row]);
+                let r = getAvailableRow(c, tempBoard);
+                tempBoard[r][c] = 1; 
+                
+                if (countMaxLines(1, tempBoard) >= 3) {
+                    connectBoard[r][c] = 2; 
+                    return;
+                }
+            }
+
+            // 4. STRATEGISCH: Mitte bevorzugen
+            if (validCols.includes(3)) {
+                let r = getAvailableRow(3, connectBoard);
+                connectBoard[r][3] = 2;
+                return;
+            }
+
+            // 5. FALLBACK: Normaler Zufallszug
+            let randomCol = validCols[Math.floor(Math.random() * validCols.length)];
+            let r = getAvailableRow(randomCol, connectBoard);
+            connectBoard[r][randomCol] = 2;
+        }
+
+        // Hilfsfunktion für die Simulation (Zählt Kettenlängen)
+        function countMaxLines(p, board) {
+            let maxChain = 0;
+            for (let r=0; r<rows; r++) {
+                for (let c=0; c<cols-2; c++) {
+                    if (board[r][c]===p && board[r][c+1]===p && board[r][c+2]===p) maxChain = Math.max(maxChain, 3);
+                }
+            }
+            for (let r=0; r<rows-2; r++) {
+                for (let c=0; c<cols; c++) {
+                    if (board[r][c]===p && board[r+1][c]===p && board[r+2][c]===p) maxChain = Math.max(maxChain, 3);
+                }
+            }
+            for (let r=0; r<rows-2; r++) {
+                for (let c=0; c<cols-2; c++) {
+                    if (board[r][c]===p && board[r+1][c+1]===p && board[r+2][c+2]===p) maxChain = Math.max(maxChain, 3);
+                }
+            }
+            for (let r=2; r<rows; r++) {
+                for (let c=0; c<cols-2; c++) {
+                    if (board[r][c]===p && board[r-1][c+1]===p && board[r-2][c+2]===p) maxChain = Math.max(maxChain, 3);
+                }
+            }
+            return maxChain;
+        }
+
+        function renderConnect() {
+            const cells = document.querySelectorAll('.connect-cell');
+            let idx = 0;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    let val = connectBoard[r][c];
+                    cells[idx].className = 'connect-cell' + (val === 1 ? ' p1' : val === 2 ? ' p2' : '');
+                    idx++;
+                }
+            }
+        }
+
+        function checkConnectWin(p, board) {
+            for (let r=0; r<rows; r++) { for (let c=0; c<cols-3; c++) { if (board[r][c]===p && board[r][c+1]===p && board[r][c+2]===p && board[r][c+3]===p) return true; } }
+            for (let r=0; r<rows-3; r++) { for (let c=0; c<cols; c++) { if (board[r][c]===p && board[r+1][c]===p && board[r+2][c]===p && board[r+3][c]===p) return true; } }
+            for (let r=0; r<rows-3; r++) { for (let c=0; c<cols-3; c++) { if (board[r][c]===p && board[r+1][c+1]===p && board[r+2][c+2]===p && board[r+3][c+3]===p) return true; } }
+            for (let r=3; r<rows; r++) { for (let c=0; c<cols-3; c++) { if (board[r][c]===p && board[r-1][c+1]===p && board[r-2][c+2]===p && board[r-3][c+3]===p) return true; } }
+            return false;
+        }
+
+        function resetConnect() { connectBoard = Array(rows).fill(null).map(() => Array(cols).fill(0)); connectActive = true; botMoving = false; renderConnect(); }
+
+        updateUI();
+        initConnectBoard();
+    </script>
+</body>
+</html>
