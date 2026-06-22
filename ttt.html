@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade - Tic-Tac-Toe</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { min-height: 100vh; background: linear-gradient(45deg, #0f172a, #1e1b4b, #2e1065, #0f172a); background-size: 400% 400%; animation: gradientBG 15s ease infinite; color: #f8fafc; padding-top: 90px; display: flex; flex-direction: column; align-items: center; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        
+        .game-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 25px; width: 340px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); margin-top: 10px; }
+        h3 { margin-bottom: 5px; font-size: 1.4rem; color: #38bdf8; }
+        
+        /* --- Schwierigkeits-Regler --- */
+        .difficulty-container { display: flex; gap: 8px; margin-bottom: 15px; width: 100%; }
+        .diff-btn { flex: 1; padding: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #94a3b8; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: all 0.2s; }
+        .diff-btn.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.4); }
+        
+        .game-reward { font-size: 0.8rem; color: #94a3b8; margin-bottom: 15px; text-align: center; height: 35px; }
+        .reward-plus { color: #2ecc71; font-weight: bold; }
+        .reward-minus { color: #e74c3c; font-weight: bold; }
+        
+        .wallet-display { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 25px; border-radius: 30px; margin-bottom: 20px; font-size: 1.1rem; }
+        .btn-back { color: #94a3b8; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .btn-back:hover { color: #fff; }
+        
+        .ttt-board { display: grid; grid-template-columns: repeat(3, 90px); grid-template-rows: repeat(3, 90px); gap: 5px; margin-bottom: 15px; }
+        .ttt-cell { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; font-weight: bold; cursor: pointer; }
+        .ttt-cell.X { color: #0ea5e9; text-shadow: 0 0 10px #0ea5e9; }
+        .ttt-cell.O { color: #ec4899; text-shadow: 0 0 10px #ec4899; }
+        
+        .btn-reset { background: rgba(255, 255, 255, 0.1); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .btn-reset:hover { background: rgba(255, 255, 255, 0.2); }
+    </style>
+</head>
+<body>
+
+    <a href="games.html" class="btn-back">⬅ Zurück zur Übersicht</a>
+
+    <div class="wallet-display">
+        Kontostand: <strong style="color: #fde047;"><span id="coin-count">0</span> 🪙</strong>
+    </div>
+
+    <div class="game-card">
+        <h3>Tic-Tac-Toe</h3>
+        
+        <div class="difficulty-container">
+            <button class="diff-btn" id="diff-easy" onclick="setDifficulty('easy')">Easy</button>
+            <button class="diff-btn" id="diff-medium" onclick="setDifficulty('medium')">Mittel</button>
+            <button class="diff-btn" id="diff-hard" onclick="setDifficulty('hard')">Schwer</button>
+        </div>
+
+        <div class="game-reward" id="reward-text">
+            </div>
+
+        <div class="ttt-board" id="ttt-board">
+            <div class="ttt-cell" onclick="playTTT(0)"></div>
+            <div class="ttt-cell" onclick="playTTT(1)"></div>
+            <div class="ttt-cell" onclick="playTTT(2)"></div>
+            <div class="ttt-cell" onclick="playTTT(3)"></div>
+            <div class="ttt-cell" onclick="playTTT(4)"></div>
+            <div class="ttt-cell" onclick="playTTT(5)"></div>
+            <div class="ttt-cell" onclick="playTTT(6)"></div>
+            <div class="ttt-cell" onclick="playTTT(7)"></div>
+            <div class="ttt-cell" onclick="playTTT(8)"></div>
+        </div>
+        <button class="btn-reset" onclick="resetTTT()">Neustart</button>
+    </div>
+
+    <script>
+        let userStats = JSON.parse(localStorage.getItem('portal_stats_v3')) || { coins: 0, rank: 'free' };
+        let currentDifficulty = localStorage.getItem('ttt_difficulty') || 'medium';
+
+        const rewards = {
+            easy: { win: 1, lose: 3 },
+            medium: { win: 3, lose: 2 },
+            hard: { win: 10, lose: 4 }
+        };
+
+        function updateUI() {
+            if(userStats.coins < 0) userStats.coins = 0; 
+            document.getElementById('coin-count').innerText = userStats.coins;
+            localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
+            
+            const r = rewards[currentDifficulty];
+            document.getElementById('reward-text').innerHTML = `Modus: ${currentDifficulty.toUpperCase()}<br>Sieg: <span class="reward-plus">+${r.win} 🪙</span> | Lose: <span class="reward-minus">-${r.lose} 🪙</span>`;
+            
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`diff-${currentDifficulty}`).classList.add('active');
+        }
+
+        function setDifficulty(diff) {
+            if (botMoving) return;
+            currentDifficulty = diff;
+            localStorage.setItem('ttt_difficulty', diff);
+            updateUI();
+            resetTTT();
+        }
+
+        let botMoving = false;
+        let tttBoard = ["", "", "", "", "", "", "", "", ""];
+        let tttActive = true;
+
+        function playTTT(cellIndex) {
+            if (tttBoard[cellIndex] !== "" || !tttActive || botMoving) return;
+            
+            tttBoard[cellIndex] = "X";
+            renderTTT();
+            
+            if (checkTTTWin("X", tttBoard)) { 
+                alert(`Gewonnen! +${rewards[currentDifficulty].win} Münzen!`); 
+                userStats.coins += rewards[currentDifficulty].win; 
+                updateUI(); 
+                tttActive = false; 
+                return; 
+            }
+            if (!tttBoard.includes("")) { alert("Unentschieden!"); tttActive = false; return; }
+            
+            botMoving = true;
+            setTimeout(() => {
+                if (!tttActive) { botMoving = false; return; }
+                
+                makeBotMove();
+                renderTTT();
+                
+                if (checkTTTWin("O", tttBoard)) { 
+                    alert(`Verloren! -${rewards[currentDifficulty].lose} Münzen.`); 
+                    userStats.coins -= rewards[currentDifficulty].lose; 
+                    updateUI(); 
+                    tttActive = false; 
+                } else if (!tttBoard.includes("")) {
+                    alert("Unentschieden!");
+                    tttActive = false;
+                }
+                botMoving = false;
+            }, 350);
+        }
+
+        // --- INTELLIGENTE KI FÜR TIC-TAC-TOE ---
+        function makeBotMove() {
+            let emptyCells = tttBoard.map((val, idx) => val === "" ? idx : null).filter(val => val !== null);
+            let errorChance = currentDifficulty === 'hard' ? 0.05 : currentDifficulty === 'medium' ? 0.30 : 1.0;
+
+            // Fehler-Faktor (Zufälliger Zug)
+            if (Math.random() < errorChance) {
+                let randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                tttBoard[randomCell] = "O";
+                return;
+            }
+
+            // 1. Offensiv: Kann der Bot gewinnen?
+            for (let cell of emptyCells) {
+                let tempBoard = [...tttBoard];
+                tempBoard[cell] = "O";
+                if (checkTTTWin("O", tempBoard)) { tttBoard[cell] = "O"; return; }
+            }
+
+            // 2. Defensiv: Droht der Spieler zu gewinnen? (Auch bei 2er-Reihen blocken)
+            for (let cell of emptyCells) {
+                let tempBoard = [...tttBoard];
+                tempBoard[cell] = "X";
+                if (checkTTTWin("X", tempBoard)) { tttBoard[cell] = "O"; return; }
+            }
+
+            // 3. Strategisch: Mitte sichern
+            if (emptyCells.includes(4)) { tttBoard[4] = "O"; return; }
+
+            // 4. Strategisch: Ecken sichern
+            let corners = [0, 2, 6, 8].filter(c => emptyCells.includes(c));
+            if (corners.length > 0) {
+                let randomCorner = corners[Math.floor(Math.random() * corners.length)];
+                tttBoard[randomCorner] = "O";
+                return;
+            }
+
+            // 5. Fallback
+            let randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            tttBoard[randomCell] = "O";
+        }
+
+        function renderTTT() {
+            const cells = document.querySelectorAll('.ttt-cell');
+            tttBoard.forEach((val, idx) => { cells[idx].innerText = val; cells[idx].className = `ttt-cell ${val}`; });
+        }
+
+        function checkTTTWin(p, board) {
+            const w = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            return w.some(comb => comb.every(idx => board[idx] === p));
+        }
+
+        function resetTTT() { tttBoard = ["", "", "", "", "", "", "", "", ""]; tttActive = true; botMoving = false; renderTTT(); }
+        
+        updateUI();
+    </script>
+</body>
+</html>
