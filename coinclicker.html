@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Arcade - Coin Clicker Deluxe</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { min-height: 100vh; background: linear-gradient(135deg, #0f172a, #1e1b4b, #0f172a); color: #f8fafc; padding: 20px; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; user-select: none; }
+        
+        .btn-back { color: #94a3b8; text-decoration: none; margin-bottom: 15px; font-size: 0.9rem; align-self: flex-start; transition: color 0.2s; }
+        .btn-back:hover { color: #fff; }
+
+        .global-wallet { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px 20px; border-radius: 30px; margin-bottom: 20px; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+
+        .clicker-container { display: flex; gap: 25px; width: 100%; max-width: 1000px; flex-wrap: wrap; justify-content: center; }
+        
+        /* Linke Seite: Münze & Prestige */
+        .clicker-section { flex: 1; min-width: 320px; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 25px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+        
+        .money-display { font-size: 2.4rem; font-weight: bold; color: #34d399; text-shadow: 0 0 15px rgba(52, 211, 153, 0.3); margin-bottom: 5px; text-align: center; }
+        .cps-display { font-size: 0.95rem; color: #94a3b8; margin-bottom: 20px; text-align: center; }
+        
+        .coin-btn { width: 180px; height: 180px; background: radial-gradient(circle, #fde047 30%, #eab308 70%); border-radius: 50%; border: 8px solid #ca8a04; cursor: pointer; box-shadow: 0 10px 0 #854d0e, 0 15px 25px rgba(0,0,0,0.4); transition: transform 0.05s, box-shadow 0.05s; font-size: 4.5rem; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; outline: none; -webkit-tap-highlight-color: transparent; }
+        .coin-btn:active { transform: translateY(8px); box-shadow: 0 2px 0 #854d0e, 0 5px 10px rgba(0,0,0,0.4); }
+        
+        .floating-text { position: absolute; color: #34d399; font-weight: bold; font-size: 1.4rem; pointer-events: none; animation: floatUp 0.7s ease-out forwards; z-index: 10; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+        @keyframes floatUp { 0% { opacity: 1; transform: translate(0, 0) scale(1); } 100% { opacity: 0; transform: translate(var(--dx), -80px) scale(0.8); } }
+
+        /* Prestige & Feature Boxen links unten */
+        .feature-box { width: 100%; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; margin-top: 15px; }
+        .feature-title { font-size: 0.95rem; font-weight: bold; color: #a855f7; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        
+        .btn-action { width: 100%; padding: 10px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: background 0.2s, transform 0.1s; font-size: 0.85rem; }
+        .btn-rebirth { background: #a855f7; color: #fff; }
+        .btn-rebirth:hover:not(:disabled) { background: #c084fc; }
+        .btn-rebirth:disabled { background: #3b0764; color: #6b21a8; cursor: not-allowed; }
+
+        /* Krypto-Minispiel */
+        .crypto-grid { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.85rem; }
+        .crypto-btn { padding: 6px 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
+        .btn-buy-crypto { background: #22c55e; color: #0f172a; }
+        .btn-sell-crypto { background: #ef4444; color: #fff; }
+
+        /* Rechte Seite: Der Shop */
+        .shop-section { flex: 1.2; min-width: 340px; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column; gap: 12px; max-height: 80vh; overflow-y: auto; }
+        .shop-section h2 { font-size: 1.3rem; color: #34d399; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
+
+        .shop-item { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s; }
+        .shop-item:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(52, 211, 153, 0.3); }
+        .shop-item.disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+        
+        .item-info { display: flex; flex-direction: column; }
+        .item-name { font-weight: bold; font-size: 1rem; }
+        .item-desc { font-size: 0.75rem; color: #94a3b8; }
+        .item-cost { font-size: 0.85rem; color: #fde047; font-weight: bold; margin-top: 2px; }
+        .item-count { font-size: 1.5rem; font-weight: bold; color: rgba(255, 255, 255, 0.12); }
+
+        .btn-reset { margin-top: 15px; background: none; border: none; color: #ef4444; font-size: 0.75rem; cursor: pointer; opacity: 0.4; }
+        .btn-reset:hover { opacity: 1; text-decoration: underline; }
+        .shop-section::-webkit-scrollbar { width: 4px; }
+        .shop-section::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <a href="games.html" class="btn-back">⬅ Zurück zur Übersicht</a>
+
+    <div class="global-wallet">
+        Konto-Guthaben: <strong style="color: #fde047;"><span id="global-coins">0</span> 🪙</strong>
+    </div>
+
+    <div class="clicker-container">
+        <div class="clicker-section">
+            <div class="money-display">$<span id="total-money">0.00</span></div>
+            <div class="cps-display">
+                Einkommen: +$<span id="total-cps">0.0</span>/s<br>
+                <span id="multiplier-bonus" style="color: #a855f7; font-size: 0.8rem; font-weight: bold;">Multiplikator: 1.0x (0 Wiedergeburten)</span>
+            </div>
+            
+            <button class="coin-btn" id="main-coin-btn" onclick="handleCoinClick(event)">🪙</button>
+
+            <div class="feature-box">
+                <div class="feature-title"><span>🧬 Wiedergeburt</span><span id="rebirth-tokens" style="color:#a855f7;">+0% Bonus</span></div>
+                <button class="btn-action btn-rebirth" id="rebirth-btn" onclick="triggerRebirth()" disabled>
+                    Wiedergeburt (Benötigt $1.0 Mio.)
+                </button>
+            </div>
+
+            <div class="feature-box">
+                <div class="feature-title"><span>📈 Live-Krypto Markt</span><span id="crypto-trend" style="color:#22c55e;">Stabil</span></div>
+                <div class="crypto-grid">
+                    <div>Kurs: <span style="color:#fde047;">$<span id="crypto-price">100</span></span><br>Besitz: <span id="crypto-owned">0</span></div>
+                    <div style="display:flex; gap:5px;">
+                        <button class="crypto-btn btn-buy-crypto" onclick="buyCrypto()">Kaufen</button>
+                        <button class="crypto-btn btn-sell-crypto" onclick="sellCrypto()">Verkaufen</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-box">
+                <div class="feature-title"><span>🏦 Wechselstube</span><span>Kurs: $500 = 1🪙</span></div>
+                <button class="btn-action" style="background:#059669; color:#fff;" id="payout-btn" onclick="cashoutToGlobalWallet()" disabled>
+                    In 1x Portal-Coin umtauschen
+                </button>
+            </div>
+            
+            <button class="btn-reset" onclick="resetGame()">🔄 Komplett zurücksetzen</button>
+        </div>
+
+        <div class="shop-section">
+            <h2>Upgrades & Investments</h2>
+            <div id="shop-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // Globales Profil-System für echte Coins
+        let userStats = JSON.parse(localStorage.getItem('portal_stats_v3')) || { coins: 0, rank: 'free' };
+
+        // Lokaler Klicker-Spielstand
+        let gameState = {
+            money: 0,
+            clickPower: 1,
+            rebirths: 0,
+            cryptoOwned: 0,
+            upgrades: {
+                clickMultiplier: { name: "Prägemaschine", desc: "Verdoppelt Klickkraft", baseCost: 60, count: 0, type: "click" },
+                minijob: { name: "Aushilfe einstellen", desc: "+0.2$ pro Sekunde", baseCost: 15, costMult: 1.15, cps: 0.2, count: 0, type: "cps" },
+                crypto: { name: "Krypto-Miner", desc: "+1.2$ pro Sekunde", baseCost: 100, costMult: 1.15, cps: 1.2, count: 0, type: "cps" },
+                store: { name: "Online-Shop", desc: "+10.0$ pro Sekunde", baseCost: 1100, costMult: 1.15, cps: 10.0, count: 0, type: "cps" },
+                factory: { name: "Automaten-Kette", desc: "+55.0$ pro Sekunde", baseCost: 12000, costMult: 1.15, cps: 55.0, count: 0, type: "cps" },
+                bank: { name: "Eigene Privatbank", desc: "+320.0$ pro Sekunde", baseCost: 130000, costMult: 1.15, cps: 320.0, count: 0, type: "cps" },
+                satellite: { name: "Weltraum-Zentralbank", desc: "+1800.0$ pro Sekunde", baseCost: 1400000, costMult: 1.15, cps: 1800.0, count: 0, type: "cps" }
+            }
+        };
+
+        // Krypto Markt Variablen
+        let cryptoPrice = 100;
+        let cryptoBasePrice = 100;
+
+        // Laden
+        if (localStorage.getItem('coin_clicker_save_v2')) {
+            try {
+                const loaded = JSON.parse(localStorage.getItem('coin_clicker_save_v2'));
+                if (typeof loaded.money === 'number') gameState.money = loaded.money;
+                if (typeof loaded.clickPower === 'number') gameState.clickPower = loaded.clickPower;
+                if (typeof loaded.rebirths === 'number') gameState.rebirths = loaded.rebirths;
+                if (typeof loaded.cryptoOwned === 'number') gameState.cryptoOwned = loaded.cryptoOwned;
+                for (let key in gameState.upgrades) {
+                    if (loaded.upgrades && loaded.upgrades[key]) {
+                        gameState.upgrades[key].count = loaded.upgrades[key].count || 0;
+                    }
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function getItemCost(key) {
+            const item = gameState.upgrades[key];
+            if (key === 'clickMultiplier') return Math.floor(item.baseCost * Math.pow(3.8, item.count));
+            return Math.floor(item.baseCost * Math.pow(item.costMult, item.count));
+        }
+
+        // Berechnung des Multiplikators durch Rebirths (Jedes Rebirth bringt +50% Einkommen)
+        function getRebirthMultiplier() {
+            return 1 + (gameState.rebirths * 0.5);
+        }
+
+        function calculateTotalCps() {
+            let totalCps = 0;
+            for (let key in gameState.upgrades) {
+                const item = gameState.upgrades[key];
+                if (item.type === "cps") totalCps += item.count * item.cps;
+            }
+            return totalCps * getRebirthMultiplier();
+        }
+
+        function formatMoney(num) {
+            if (num >= 1000000000) return (num / 1000000000).toFixed(2) + " Mrd.";
+            if (num >= 1000000) return (num / 1000000).toFixed(2) + " Mio.";
+            return num.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function updateDisplay() {
+            document.getElementById('global-coins').innerText = userStats.coins;
+            document.getElementById('total-money').innerText = formatMoney(gameState.money);
+            
+            const totalCps = calculateTotalCps();
+            document.getElementById('total-cps').innerText = totalCps.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+            document.getElementById('multiplier-bonus').innerText = `Multiplikator: ${getRebirthMultiplier().toFixed(1)}x (${gameState.rebirths} Wiedergeburten)`;
+
+            // Rebirth Button Validierung
+            const rebirthBtn = document.getElementById('rebirth-btn');
+            if (gameState.money >= 1000000) {
+                rebirthBtn.disabled = false;
+                rebirthBtn.innerText = `Wiedergeburt starten (+50% Multiplikator!)`;
+            } else {
+                rebirthBtn.disabled = true;
+                rebirthBtn.innerText = `Wiedergeburt (Benötigt $1.0 Mio.)`;
+            }
+
+            // Wechselstube Validierung
+            const payoutBtn = document.getElementById('payout-btn');
+            if (gameState.money >= 500) payoutBtn.disabled = false; else payoutBtn.disabled = true;
+
+            // Krypto Anzeige
+            document.getElementById('crypto-price').innerText = Math.floor(cryptoPrice);
+            document.getElementById('crypto-owned').innerText = gameState.cryptoOwned;
+
+            // Shop Rendern
+            const shopContainer = document.getElementById('shop-container');
+            let html = "";
+            for (let key in gameState.upgrades) {
+                const item = gameState.upgrades[key];
+                const cost = getItemCost(key);
+                const canAfford = gameState.money >= cost;
+                
+                html += `
+                    <div class="shop-item ${canAfford ? '' : 'disabled'}" onclick="buyUpgrade('${key}')">
+                        <div class="item-info">
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-desc">${item.desc}</div>
+                            <div class="item-cost">$${cost.toLocaleString('de-DE')}</div>
+                        </div>
+                        <div class="item-count">${item.count}</div>
+                    </div>
+                `;
+            }
+            shopContainer.innerHTML = html;
+        }
+
+        function handleCoinClick(event) {
+            // Klickkraft profitiert ebenfalls voll vom Rebirth-Multiplikator!
+            const gain = gameState.clickPower * getRebirthMultiplier();
+            gameState.money += gain;
+            createFloatingText(event, gain);
+            updateDisplay();
+            saveGame();
+        }
+
+        function createFloatingText(event, amt) {
+            const coinBtn = document.getElementById('main-coin-btn');
+            let clickX = event.clientX || (event.touches && event.touches[0] ? event.touches[0].clientX : 200);
+            let clickY = event.clientY || (event.touches && event.touches[0] ? event.touches[0].clientY : 200);
+
+            const text = document.createElement('div');
+            text.className = 'floating-text';
+            text.innerText = `+$${amt.toFixed(1)}`;
+            text.style.setProperty('--dx', `${(Math.random() - 0.5) * 50}px`);
+            text.style.left = `${clickX - 15}px`;
+            text.style.top = `${clickY - 15}px`;
+            
+            document.body.appendChild(text);
+            setTimeout(() => text.remove(), 700);
+        }
+
+        function buyUpgrade(key) {
+            const cost = getItemCost(key);
+            if (gameState.money >= cost) {
+                gameState.money -= cost;
+                gameState.upgrades[key].count++;
+                if (key === 'clickMultiplier') gameState.clickPower *= 2;
+                updateDisplay();
+                saveGame();
+            }
+        }
+
+        // SNOWBALL-EFFEKT: Das Rebirth System setz den Fortschritt zurück, erhöht aber permanent den Multiplikator
+        function triggerRebirth() {
+            if (gameState.money >= 1000000) {
+                if (confirm("Gehst du den Deal ein? Du verlierst dein Geld und deine Gebäude, erhältst dafür aber dauerhaft +50% mehr Einkommen auf alles!")) {
+                    gameState.money = 0;
+                    gameState.clickPower = 1;
+                    gameState.cryptoOwned = 0;
+                    gameState.rebirths += 1;
+                    
+                    // Gebäude-Zähler zurücksetzen
+                    for(let key in gameState.upgrades) {
+                        gameState.upgrades[key].count = 0;
+                    }
+                    
+                    updateDisplay();
+                    saveGame();
+                }
+            }
+        }
+
+        // KRYPTO-MINISPIEL LOGIK
+        function buyCrypto() {
+            if (gameState.money >= cryptoPrice) {
+                gameState.money -= cryptoPrice;
+                gameState.cryptoOwned++;
+                updateDisplay();
+                saveGame();
+            }
+        }
+
+        function sellCrypto() {
+            if (gameState.cryptoOwned > 0) {
+                gameState.cryptoOwned--;
+                gameState.money += cryptoPrice;
+                updateDisplay();
+                saveGame();
+            }
+        }
+
+        // Krypto-Markt Ticker (Preise schwanken jede Sekunde zufällig)
+        setInterval(() => {
+            const changePercent = (Math.random() - 0.48) * 0.25; // Leichte Tendenz nach oben
+            cryptoPrice = Math.max(10, cryptoPrice * (1 + changePercent));
+            
+            const trendDisplay = document.getElementById('crypto-trend');
+            if (changePercent > 0.05) {
+                trendDisplay.innerText = "🚀 PUMPING";
+                trendDisplay.style.color = "#22c55e";
+            } else if (changePercent < -0.05) {
+                trendDisplay.innerText = "📉 CRASHING";
+                trendDisplay.style.color = "#ef4444";
+            } else {
+                trendDisplay.innerText = "Seitwärts";
+                trendDisplay.style.color = "#94a3b8";
+            }
+            updateDisplay();
+        }, 2000);
+
+        // DIE ECHTE BELOHNUNG: Umtausch in globale Portal-Coins
+        function cashoutToGlobalWallet() {
+            if (gameState.money >= 500) {
+                gameState.money -= 500;
+                
+                // Münze ins Profil buchen
+                userStats.coins += 1;
+                localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
+                
+                alert("Erfolgreich eingetauscht! 1 🪙 wurde deinem globalen Portal-Konto gutgeschrieben.");
+                updateDisplay();
+                saveGame();
+            }
+        }
+
+        function saveGame() {
+            localStorage.setItem('coin_clicker_save_v2', JSON.stringify(gameState));
+        }
+
+        function resetGame() {
+            if (confirm("Das löscht absolut alles im Clicker (außer deine bereits verdienten Portal-Coins). Sicher?")) {
+                localStorage.removeItem('coin_clicker_save_v2');
+                location.reload();
+            }
+        }
+
+        // Gameloop (Zyklen pro 100ms)
+        setInterval(() => {
+            const totalCps = calculateTotalCps();
+            if (totalCps > 0) {
+                gameState.money += totalCps / 10;
+                updateDisplay();
+            }
+        }, 100);
+
+        setInterval(saveGame, 15000);
+        updateDisplay();
+    </script>
+</body>
+</html>
