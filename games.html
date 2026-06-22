@@ -6,9 +6,13 @@
     <title>Arcade - Spieleübersicht</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
-        body { min-height: 100vh; background: linear-gradient(45deg, #0f172a, #1e1b4b, #2e1065, #0f172a); background-size: 400% 400%; animation: gradientBG 15s ease infinite; color: #f8fafc; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
+        body { min-height: 100vh; background: linear-gradient(45deg, #0f172a, #1e1b4b, #2e1065, #0f172a); background-size: 400% 400%; animation: gradientBG 15s ease infinite; color: #f8fafc; padding: 60px 20px 40px 20px; display: flex; flex-direction: column; align-items: center; position: relative; }
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
+        /* Neuer Style für den Back-Button */
+        .back-btn { position: absolute; top: 20px; left: 20px; display: flex; align-items: center; gap: 8px; color: #94a3b8; text-decoration: none; font-size: 0.9rem; padding: 8px 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; backdrop-filter: blur(8px); transition: all 0.2s; }
+        .back-btn:hover { color: #fff; border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); transform: translateX(-2px); }
+
         h1 { margin-bottom: 10px; font-size: 2.5rem; color: #38bdf8; text-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
         .subtitle { color: #94a3b8; margin-bottom: 30px; font-size: 1rem; }
         
@@ -21,9 +25,17 @@
         .game-icon { font-size: 3rem; margin-bottom: 15px; }
         .game-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 8px; color: #fff; }
         .game-desc { font-size: 0.85rem; color: #94a3b8; line-height: 1.4; }
+
+        /* Responsive Anpassung für Mobilgeräte */
+        @media (max-width: 600px) {
+            .back-btn { position: static; margin-bottom: 20px; align-self: flex-start; }
+            body { padding-top: 20px; }
+        }
     </style>
 </head>
 <body>
+
+    <a href="index.html" class="back-btn">← Zurück</a>
 
     <h1>Arcade Game Zone</h1>
     <p class="subtitle">Wähle ein Spiel und verdiene Coins!</p>
