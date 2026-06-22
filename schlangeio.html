@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Arcade - Schlange.io</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { min-height: 100vh; background: linear-gradient(45deg, #0f172a, #1e1b4b, #2e1065, #0f172a); background-size: 400% 400%; animation: gradientBG 15s ease infinite; color: #f8fafc; padding-top: 45px; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; user-select: none; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        
+        .game-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 20px; width: 580px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); }
+        h3 { margin-bottom: 5px; font-size: 1.4rem; color: #2ecc71; text-shadow: 0 0 10px rgba(46, 204, 113, 0.3); }
+        
+        .difficulty-container { display: flex; gap: 8px; margin-bottom: 12px; width: 100%; }
+        .diff-btn { flex: 1; padding: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #94a3b8; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: all 0.2s; }
+        .diff-btn.active { background: #2ecc71; color: #0f172a; border-color: #2ecc71; box-shadow: 0 0 10px rgba(46, 204, 113, 0.4); }
+        
+        .game-reward { font-size: 0.8rem; color: #94a3b8; margin-bottom: 12px; text-align: center; height: 35px; line-height: 1.4; }
+        .reward-plus { color: #2ecc71; font-weight: bold; }
+        .reward-minus { color: #e74c3c; font-weight: bold; }
+        
+        .wallet-display { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 25px; border-radius: 30px; margin-bottom: 15px; font-size: 1.1rem; }
+        .btn-back { color: #94a3b8; text-decoration: none; margin-bottom: 15px; font-size: 0.9rem; }
+        .btn-back:hover { color: #fff; }
+
+        .arena-container { position: relative; width: 540px; height: 380px; background: #070a13; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden; margin-bottom: 15px; cursor: crosshair; }
+        #arena-canvas { width: 100%; height: 100%; display: block; }
+        
+        .hud { position: absolute; top: 10px; left: 10px; font-size: 0.75rem; color: rgba(255,255,255,0.7); pointer-events: none; background: rgba(0,0,0,0.6); padding: 5px 8px; border-radius: 4px; line-height: 1.4; z-index: 4; }
+        
+        /* Mobile Elemente */
+        .mobile-boost-btn { position: absolute; bottom: 20px; left: 20px; width: 65px; height: 65px; background: rgba(46, 204, 113, 0.2); border: 2px solid rgba(46, 204, 113, 0.5); border-radius: 50%; color: #fff; font-weight: bold; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; touch-action: none; display: none; z-index: 5; }
+        .mobile-boost-btn:active { background: rgba(46, 204, 113, 0.5); }
+
+        /* Virtueller Joystick */
+        .joystick-zone { position: absolute; bottom: 20px; right: 20px; width: 90px; height: 90px; background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.15); border-radius: 50%; display: none; align-items: center; justify-content: center; touch-action: none; z-index: 5; }
+        .joystick-knob { width: 35px; height: 35px; background: rgba(56, 189, 248, 0.6); border-radius: 50%; border: 1px solid #38bdf8; transition: transform 0.05s linear; }
+
+        .start-screen { position: absolute; inset: 0; background: rgba(7, 10, 19, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 16px; color: #fff; text-align: center; padding: 25px; z-index: 10; }
+        .start-screen h2 { font-size: 1.6rem; color: #2ecc71; margin-bottom: 10px; }
+        .start-screen p { font-size: 0.85rem; color: #94a3b8; margin: 5px 0 20px; line-height: 1.5; }
+
+        .btn-start { background: #2ecc71; color: #0f172a; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: transform 0.2s; }
+        .btn-start:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <a href="games.html" class="btn-back">⬅ Zurück zur Übersicht</a>
+
+    <div class="wallet-display">
+        Kontostand: <strong style="color: #fde047;"><span id="coin-count">0</span> 🪙</strong>
+    </div>
+
+    <div class="game-card">
+        <h3>Schlange.io Arena</h3>
+        
+        <div class="difficulty-container">
+            <button class="diff-btn" id="diff-easy" onclick="setDifficulty('easy')">Easy</button>
+            <button class="diff-btn" id="diff-medium" onclick="setDifficulty('medium')">Mittel</button>
+            <button class="diff-btn" id="diff-hard" onclick="setDifficulty('hard')">Schwer</button>
+        </div>
+
+        <div class="game-reward" id="reward-text">
+            </div>
+
+        <div class="arena-container" id="game-zone">
+            <canvas id="arena-canvas" width="540" height="380"></canvas>
+            <div class="hud" id="game-hud" style="display: none;">
+                Länge: <span id="hud-len" style="color:#2ecc71; font-weight:bold;">12</span><br>
+                PC: <span style="color:#fde047;">Leertaste = Boost 🔥</span>
+            </div>
+            
+            <div id="boost-btn" class="mobile-boost-btn">BOOST</div>
+            <div id="joy-zone" class="joystick-zone">
+                <div id="joy-knob" class="joystick-knob"></div>
+            </div>
+            
+            <div class="start-screen" id="start-overlay">
+                <h2>Willkommen in der Arena! 👋</h2>
+                <p>
+                    Bewege deine Schlange durch die riesige Map und friss Punkte.<br>
+                    Bringe Bots zum Crashen und weiche den roten Außenwänden aus!
+                </p>
+                <p style="font-size: 0.8rem; color: #a855f7;">
+                    <strong>PC:</strong> Maus zum Lenken | Space zum Boosten<br>
+                    <strong>Mobil:</strong> Joystick rechts | Boost-Button links
+                </p>
+                <button class="btn-start" onclick="startIoGame()">Spiel starten</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let userStats = JSON.parse(localStorage.getItem('portal_stats_v3')) || { coins: 0, rank: 'free' };
+        let currentDifficulty = localStorage.getItem('io_difficulty') || 'medium';
+
+        const MAP_WIDTH = 3000;
+        const MAP_HEIGHT = 2000;
+
+        const config = {
+            easy: { divisor: 15, penalty: 1, botSpeed: 1.4, botCount: 20 },
+            medium: { divisor: 10, penalty: 2, botSpeed: 2.2, botCount: 25 },
+            hard: { divisor: 5, penalty: 4, botSpeed: 3.2, botCount: 30 }
+        };
+
+        function updateUI() {
+            if(userStats.coins < 0) userStats.coins = 0;
+            document.getElementById('coin-count').innerText = userStats.coins;
+            localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
+            
+            const cfg = config[currentDifficulty];
+            document.getElementById('reward-text').innerHTML = `Alle ${cfg.divisor} Glieder Länge: <span class="reward-plus">+1 🪙</span><br>Crash/Wand: <span class="reward-minus">-${cfg.penalty} 🪙</span>`;
+            
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`diff-${currentDifficulty}`).classList.add('active');
+        }
+
+        function setDifficulty(diff) {
+            if (gameActive) return;
+            currentDifficulty = diff;
+            localStorage.setItem('io_difficulty', diff);
+            updateUI();
+        }
+
+        const canvas = document.getElementById('arena-canvas');
+        const ctx = canvas.getContext('2d');
+        let gameActive = false, loop, player, bots = [], foods = [];
+        let mouseScreenPos = { x: 270, y: 190 };
+        let isBoosting = false, boostCounter = 0;
+
+        // Joystick Variablen
+        let moveAngle = 0;
+        let isMobileUsingJoystick = false;
+
+        const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+        // PC Maustracking
+        canvas.addEventListener('mousemove', (e) => {
+            if (isMobile) return;
+            const rect = canvas.getBoundingClientRect();
+            mouseScreenPos.x = e.clientX - rect.left;
+            mouseScreenPos.y = e.clientY - rect.top;
+        });
+
+        // PC Keyboard Space-Boost
+        window.addEventListener('keydown', (e) => { if(e.code === 'Space' && gameActive) { e.preventDefault(); isBoosting = true; } });
+        window.addEventListener('keyup', (e) => { if(e.code === 'Space') isBoosting = false; });
+
+        // Mobile linker Button-Boost
+        const mobileBoost = document.getElementById('boost-btn');
+        mobileBoost.addEventListener('touchstart', (e) => { e.preventDefault(); if(gameActive) isBoosting = true; });
+        mobileBoost.addEventListener('touchend', () => { isBoosting = false; });
+
+        // Mobile Virtueller Joystick Logik
+        const joyZone = document.getElementById('joy-zone');
+        const joyKnob = document.getElementById('joy-knob');
+        let joyRect = null;
+
+        joyZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isMobileUsingJoystick = true;
+            joyRect = joyZone.getBoundingClientRect();
+            handleJoystickMove(e.touches[0]);
+        });
+
+        joyZone.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if(isMobileUsingJoystick) handleJoystickMove(e.touches[0]);
+        });
+
+        joyZone.addEventListener('touchend', () => {
+            isMobileUsingJoystick = false;
+            joyKnob.style.transform = `translate(0px, 0px)`;
+            // moveAngle wird NICHT zurückgesetzt, damit die Schlange weiterläuft!
+        });
+
+        function handleJoystickMove(touch) {
+            const centerX = joyRect.left + joyRect.width / 2;
+            const centerY = joyRect.top + joyRect.height / 2;
+            let deltaX = touch.clientX - centerX;
+            let deltaY = touch.clientY - centerY;
+            let distance = Math.hypot(deltaX, deltaY);
+            let maxDistance = joyRect.width / 2 - 10;
+
+            moveAngle = Math.atan2(deltaY, deltaX);
+
+            if (distance > maxDistance) {
+                deltaX = Math.cos(moveAngle) * maxDistance;
+                deltaY = Math.sin(moveAngle) * maxDistance;
+            }
+
+            joyKnob.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+        }
+
+        function startIoGame() {
+            document.getElementById('start-overlay').style.display = 'none';
+            document.getElementById('game-hud').style.display = 'block';
+            
+            if (isMobile) {
+                mobileBoost.style.display = 'flex';
+                joyZone.style.display = 'flex';
+            }
+            
+            gameActive = true;
+            isBoosting = false;
+            isMobileUsingJoystick = false;
+            boostCounter = 0;
+            moveAngle = 0; // Startet nach rechts gerichtet
+            
+            const cfg = config[currentDifficulty];
+
+            player = {
+                segments: [],
+                color: '#2ecc71',
+                maxLen: 12
+            };
+            let startX = MAP_WIDTH / 2;
+            let startY = MAP_HEIGHT / 2;
+            for(let i=0; i<player.maxLen; i++) {
+                player.segments.push({ x: startX - i*6, y: startY });
+            }
+
+            bots = [];
+            for(let i=0; i<cfg.botCount; i++) {
+                bots.push(spawnBot());
+            }
+
+            foods = [];
+            for(let i=0; i<350; i++) {
+                foods.push(spawnFood(false));
+            }
+
+            runIoGame();
+        }
+
+        function spawnBot() {
+            let rx = Math.random() * (MAP_WIDTH - 200) + 100;
+            let ry = Math.random() * (MAP_HEIGHT - 200) + 100;
+            let bot = {
+                segments: [],
+                color: `hsl(${Math.random() * 360}, 85%, 55%)`,
+                angle: Math.random() * Math.PI * 2,
+                maxLen: Math.floor(Math.random() * 20) + 10
+            };
+            for(let i=0; i<bot.maxLen; i++) {
+                bot.segments.push({ x: rx - i*5, y: ry });
+            }
+            return bot;
+        }
+
+        function spawnFood(isCorpse, x = null, y = null, color = null) {
+            return { 
+                x: x !== null ? x : Math.random() * MAP_WIDTH, 
+                y: y !== null ? y : Math.random() * MAP_HEIGHT, 
+                size: isCorpse ? 6.5 : (Math.random() * 2 + 2.5), 
+                color: color !== null ? color : `hsl(${Math.random() * 360}, 100%, 65%)`,
+                isCorpse: isCorpse
+            };
+        }
+
+        function triggerGameOver(reason) {
+            gameActive = false;
+            isBoosting = false;
+            mobileBoost.style.display = 'none';
+            joyZone.style.display = 'none';
+            
+            const cfg = config[currentDifficulty];
+            let earned = Math.floor(player.maxLen / cfg.divisor);
+            let finalCoins = earned - cfg.penalty;
+            
+            alert(`Game Over! (${reason})\nDeine Länge: ${player.maxLen}\nCoins erhalten: +${earned}\nStrafe: -${cfg.penalty}`);
+            
+            userStats.coins += finalCoins;
+            updateUI();
+            document.getElementById('start-overlay').style.display = 'flex';
+            document.getElementById('game-hud').style.display = 'none';
+        }
+
+        function runIoGame() {
+            if (!gameActive) return;
+
+            let pHead = player.segments[0];
+            let camX = pHead.x - canvas.width / 2;
+            let camY = pHead.y - canvas.height / 2;
+
+            if (pHead.x <= 0 || pHead.x >= MAP_WIDTH || pHead.y <= 0 || pHead.y >= MAP_HEIGHT) {
+                triggerGameOver("Wand berührt");
+                return;
+            }
+
+            let currentSpeed = 2.8;
+            if (isBoosting && player.maxLen > 6) {
+                currentSpeed = 5.2;
+                boostCounter++;
+                if (boostCounter % 12 === 0) {
+                    player.maxLen--;
+                    document.getElementById('hud-len').innerText = player.maxLen;
+                    let pTail = player.segments[player.segments.length - 1];
+                    foods.push(spawnFood(false, pTail.x + (Math.random()-0.5)*15, pTail.y + (Math.random()-0.5)*15, player.color));
+                }
+            }
+
+            // Richtungsberechnung (PC / Mobil)
+            let angle = moveAngle; 
+
+            if (!isMobile) {
+                let dx = mouseScreenPos.x - (canvas.width / 2);
+                let dy = mouseScreenPos.y - (canvas.height / 2);
+                angle = Math.atan2(dy, dx);
+            }
+
+            // Die Schlange bewegt sich jetzt IMMER weiter
+            let nx = pHead.x + Math.cos(angle) * currentSpeed;
+            let ny = pHead.y + Math.sin(angle) * currentSpeed;
+            player.segments.unshift({ x: nx, y: ny });
+            if (player.segments.length > player.maxLen) player.segments.pop();
+
+            const bSpeed = config[currentDifficulty].botSpeed;
+            bots.forEach((bot, bIdx) => {
+                let bHead = bot.segments[0];
+                
+                if (bHead.x <= 0 || bHead.x >= MAP_WIDTH || bHead.y <= 0 || bHead.y >= MAP_HEIGHT) {
+                    bot.segments.forEach((seg, sIdx) => { if (sIdx % 2 === 0) foods.push(spawnFood(true, seg.x, seg.y, bot.color)); });
+                    bots[bIdx] = spawnBot();
+                    return;
+                }
+
+                if(Math.random() < 0.04) {
+                    bot.angle += (Math.random() - 0.5) * 1.2;
+                }
+                let bx = bHead.x + Math.cos(bot.angle) * bSpeed;
+                let by = bHead.y + Math.sin(bot.angle) * bSpeed;
+
+                bot.segments.unshift({ x: bx, y: by });
+                if(bot.segments.length > bot.maxLen) bot.segments.pop();
+            });
+
+            foods.forEach((food, fIdx) => {
+                if (Math.hypot(pHead.x - food.x, pHead.y - food.y) < 13) {
+                    player.maxLen += food.isCorpse ? 2 : 1; 
+                    document.getElementById('hud-len').innerText = player.maxLen;
+                    if (food.isCorpse) foods.splice(fIdx, 1); else foods[fIdx] = spawnFood(false);
+                }
+                bots.forEach(bot => {
+                    if (Math.hypot(bot.segments[0].x - food.x, bot.segments[0].y - food.y) < 13) {
+                        bot.maxLen += food.isCorpse ? 2 : 1;
+                        if (food.isCorpse) foods.splice(fIdx, 1); else foods[fIdx] = spawnFood(false);
+                    }
+                });
+            });
+
+            let hitBot = false;
+            bots.forEach(bot => {
+                bot.segments.forEach((seg) => {
+                    if (Math.hypot(pHead.x - seg.x, pHead.y - seg.y) < 9) hitBot = true;
+                });
+            });
+
+            if (hitBot) {
+                triggerGameOver("Gegner gerammt");
+                return;
+            }
+
+            for (let i = bots.length - 1; i >= 0; i--) {
+                let bot = bots[i];
+                let bHead = bot.segments[0];
+                let destroyed = false;
+
+                player.segments.forEach(pSeg => {
+                    if (Math.hypot(bHead.x - pSeg.x, bHead.y - pSeg.y) < 9) destroyed = true;
+                });
+
+                bots.forEach((otherBot) => {
+                    if (bot !== otherBot) {
+                        otherBot.segments.forEach(oSeg => {
+                            if (Math.hypot(bHead.x - oSeg.x, bHead.y - oSeg.y) < 9) destroyed = true;
+                        });
+                    }
+                });
+
+                if (destroyed) {
+                    bot.segments.forEach((seg, sIdx) => {
+                        if (sIdx % 2 === 0) foods.push(spawnFood(true, seg.x, seg.y, bot.color));
+                    });
+                    bots[i] = spawnBot();
+                }
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(-camX, -camY);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+            let startGridX = Math.floor(camX / 30) * 30;
+            let startGridY = Math.floor(camY / 30) * 30;
+            for(let x = Math.max(0, startGridX); x < Math.min(MAP_WIDTH, startGridX + canvas.width + 30); x += 30) {
+                ctx.beginPath(); ctx.moveTo(x, Math.max(0, camY)); ctx.lineTo(x, Math.min(MAP_HEIGHT, camY + canvas.height)); ctx.stroke();
+            }
+            for(let y = Math.max(0, startGridY); y < Math.min(MAP_HEIGHT, startGridY + canvas.height + 30); y += 30) {
+                ctx.beginPath(); ctx.moveTo(Math.max(0, camX), y); ctx.lineTo(Math.min(MAP_WIDTH, camX + canvas.width), y); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 5;
+            ctx.strokeRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+
+            foods.forEach(f => {
+                if (f.x > camX - 20 && f.x < camX + canvas.width + 20 && f.y > camY - 20 && f.y < camY + canvas.height + 20) {
+                    ctx.fillStyle = f.color;
+                    if(f.isCorpse) { ctx.shadowBlur = 10; ctx.shadowColor = f.color; }
+                    ctx.beginPath(); ctx.arc(f.x, f.y, f.size, 0, Math.PI*2); ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            });
+
+            bots.forEach(bot => {
+                ctx.fillStyle = bot.color;
+                bot.segments.forEach((seg, sIdx) => {
+                    if (seg.x > camX - 15 && seg.x < camX + canvas.width + 15 && seg.y > camY - 15 && seg.y < camY + canvas.height + 15) {
+                        ctx.beginPath(); ctx.arc(seg.x, seg.y, sIdx === 0 ? 6.5 : 4.8, 0, Math.PI*2); ctx.fill();
+                    }
+                });
+            });
+
+            ctx.fillStyle = player.color;
+            ctx.shadowBlur = isBoosting ? 14 : 8; ctx.shadowColor = player.color;
+            player.segments.forEach((seg, sIdx) => {
+                ctx.beginPath(); ctx.arc(seg.x, seg.y, sIdx === 0 ? 7.5 : 5.8, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.shadowBlur = 0;
+
+            ctx.restore();
+            loop = requestAnimationFrame(runIoGame);
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
