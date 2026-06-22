@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade - Cyber Runner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { min-height: 100vh; background: linear-gradient(45deg, #0f172a, #1e1b4b, #2e1065, #0f172a); background-size: 400% 400%; animation: gradientBG 15s ease infinite; color: #f8fafc; padding-top: 90px; display: flex; flex-direction: column; align-items: center; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        
+        .game-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 25px; width: 360px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); margin-top: 10px; }
+        h3 { margin-bottom: 5px; font-size: 1.4rem; color: #38bdf8; }
+        
+        .difficulty-container { display: flex; gap: 8px; margin-bottom: 15px; width: 100%; }
+        .diff-btn { flex: 1; padding: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #94a3b8; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: all 0.2s; }
+        .diff-btn.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.4); }
+        
+        .game-reward { font-size: 0.8rem; color: #94a3b8; margin-bottom: 15px; text-align: center; height: 35px; }
+        .reward-plus { color: #2ecc71; font-weight: bold; }
+        .reward-minus { color: #e74c3c; font-weight: bold; }
+        
+        .wallet-display { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 25px; border-radius: 30px; margin-bottom: 20px; font-size: 1.1rem; }
+        .btn-back { color: #94a3b8; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .btn-back:hover { color: #fff; }
+
+        .runner-container { position: relative; width: 310px; height: 180px; background: rgba(0, 0, 0, 0.4); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden; margin-bottom: 15px; }
+        #runner-canvas { width: 100%; height: 100%; display: block; }
+        
+        .runner-info { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.6); font-size: 0.8rem; text-align: center; pointer-events: none; width: 100%; line-height: 1.4; }
+        #live-score { font-size: 1.1rem; }
+        
+        .btn-reset { background: rgba(255, 255, 255, 0.1); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .btn-reset:hover { background: rgba(255, 255, 255, 0.2); }
+    </style>
+</head>
+<body>
+
+    <a href="games.html" class="btn-back">⬅ Zurück zur Übersicht</a>
+
+    <div class="wallet-display">
+        Kontostand: <strong style="color: #fde047;"><span id="coin-count">0</span> 🪙</strong>
+    </div>
+
+    <div class="game-card">
+        <h3>Cyber Runner</h3>
+        
+        <div class="difficulty-container">
+            <button class="diff-btn" id="diff-easy" onclick="setDifficulty('easy')">Easy</button>
+            <button class="diff-btn" id="diff-medium" onclick="setDifficulty('medium')">Mittel</button>
+            <button class="diff-btn" id="diff-hard" onclick="setDifficulty('hard')">Schwer</button>
+        </div>
+
+        <div class="game-reward" id="reward-text">
+            </div>
+
+        <div class="runner-container" id="game-zone">
+            <canvas id="runner-canvas" width="310" height="180"></canvas>
+            <div class="runner-info" id="runner-info">
+                Space / Klick oben = Springen<br>
+                Pfeil-Unten / Klick unten = Ducken<br><br>
+                <span id="live-score" style="color:#38bdf8; font-weight:bold;">Score: 0</span>
+            </div>
+        </div>
+        <button class="btn-reset" onclick="initRunner()">Neustart</button>
+    </div>
+
+    <script>
+        let userStats = JSON.parse(localStorage.getItem('portal_stats_v3')) || { coins: 0, rank: 'free' };
+        let currentDifficulty = localStorage.getItem('runner_difficulty') || 'medium';
+
+        const config = {
+            easy: { coinInterval: 100, coinReward: 1, losePenalty: 3, baseSpeed: 3.5, speedInc: 0.001 },
+            medium: { coinInterval: 75, coinReward: 1, losePenalty: 2, baseSpeed: 4.5, speedInc: 0.002 },
+            hard: { coinInterval: 50, coinReward: 2, losePenalty: 4, baseSpeed: 6.0, speedInc: 0.004 }
+        };
+
+        function updateUI() {
+            if(userStats.coins < 0) userStats.coins = 0; 
+            document.getElementById('coin-count').innerText = userStats.coins;
+            localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
+            
+            const cfg = config[currentDifficulty];
+            document.getElementById('reward-text').innerHTML = `Pro ${cfg.coinInterval} Score: <span class="reward-plus">+${cfg.coinReward} 🪙</span> | Crash: <span class="reward-minus">-${cfg.losePenalty} 🪙</span>`;
+            
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`diff-${currentDifficulty}`).classList.add('active');
+        }
+
+        function setDifficulty(diff) {
+            if (runnerRunning) return;
+            currentDifficulty = diff;
+            localStorage.setItem('runner_difficulty', diff);
+            updateUI();
+            initRunner();
+        }
+
+        const canvas = document.getElementById('runner-canvas');
+        const ctx = canvas.getContext('2d');
+        let runner, obstacles, score, runnerLoop, runnerRunning, currentSpeed;
+
+        const groundY = 145; 
+
+        function initRunner() {
+            cancelAnimationFrame(runnerLoop);
+            runnerRunning = false;
+            score = 0;
+            obstacles = [];
+            currentSpeed = config[currentDifficulty].baseSpeed;
+            
+            runner = { 
+                x: 40, 
+                y: groundY - 30, 
+                vy: 0, 
+                width: 20, 
+                height: 30, 
+                defaultHeight: 30,
+                duckHeight: 14,
+                jumping: false, 
+                ducking: false 
+            };
+            
+            document.getElementById('runner-info').style.opacity = "1";
+            document.getElementById('live-score').innerText = "Score: 0";
+            drawRunnerScene();
+        }
+
+        function startRunner() {
+            if (runnerRunning) return;
+            runnerRunning = true;
+            document.getElementById('runner-info').style.opacity = "0.2";
+            updateRunner();
+        }
+
+        function handleJump() {
+            if (!runnerRunning) { startRunner(); return; }
+            if (!runner.jumping && !runner.ducking) { 
+                runner.vy = -7.5; 
+                runner.jumping = true; 
+            }
+        }
+
+        function handleDuck(isDucking) {
+            if (!runnerRunning || runner.jumping) return;
+            if (isDucking) {
+                runner.ducking = true;
+                runner.height = runner.duckHeight;
+                runner.y = groundY - runner.duckHeight;
+            } else {
+                runner.ducking = false;
+                runner.height = runner.defaultHeight;
+                runner.y = groundY - runner.defaultHeight;
+            }
+        }
+
+        window.onkeydown = function(e) {
+            if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); handleJump(); }
+            if (e.code === "ArrowDown") { e.preventDefault(); handleDuck(true); }
+        };
+        window.onkeyup = function(e) {
+            if (e.code === "ArrowDown") { handleDuck(false); }
+        };
+
+        const gameZone = document.getElementById('game-zone');
+        gameZone.onmousedown = function(e) {
+            const rect = gameZone.getBoundingClientRect();
+            const clickY = e.clientY - rect.top;
+            if (clickY < rect.height / 2) { handleJump(); } else { handleDuck(true); }
+        };
+        gameZone.onmouseup = function() { handleDuck(false); };
+        
+        gameZone.ontouchstart = function(e) {
+            e.preventDefault();
+            const rect = gameZone.getBoundingClientRect();
+            const touchY = e.touches[0].clientY - rect.top;
+            if (touchY < rect.height / 2) { handleJump(); } else { handleDuck(true); }
+        };
+        gameZone.ontouchend = function() { handleDuck(false); };
+
+        function updateRunner() {
+            if (!runnerRunning) return;
+            score++;
+            document.getElementById('live-score').innerText = "Score: " + score;
+            
+            const cfg = config[currentDifficulty];
+            if (score % cfg.coinInterval === 0) { 
+                userStats.coins += cfg.coinReward; 
+                updateUI(); 
+            }
+
+            currentSpeed += cfg.speedInc;
+
+            if (runner.jumping) {
+                runner.vy += 0.42; 
+                runner.y += runner.vy;
+                if (runner.y >= groundY - runner.defaultHeight) { 
+                    runner.y = groundY - runner.defaultHeight; 
+                    runner.vy = 0; 
+                    runner.jumping = false; 
+                }
+            }
+
+            if (Math.random() < 0.016 && (obstacles.length === 0 || obstacles[obstacles.length - 1].x < 160)) {
+                let type = Math.random() > 0.5 ? 'cactus' : 'bird';
+                if (type === 'cactus') {
+                    obstacles.push({ type: 'cactus', x: 320, y: groundY - 20, width: 14, height: 20 });
+                } else {
+                    // Die Hitbox des Vogels geht physikalisch ab Kopfhöhe bis ganz nach oben (Y: 0)
+                    // Damit ist das Überfliegen unmöglich gemacht
+                    obstacles.push({ type: 'bird', x: 320, y: 0, width: 18, height: groundY - 20 });
+                }
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].x -= currentSpeed;
+                
+                if (runner.x < obstacles[i].x + obstacles[i].width && runner.x + runner.width > obstacles[i].x &&
+                    runner.y < obstacles[i].y + obstacles[i].height && runner.y + runner.height > obstacles[i].y) {
+                    
+                    runnerRunning = false;
+                    alert(`Game Over! Score: ${score}.\nDu verlierst ${cfg.losePenalty} Münzen.`);
+                    userStats.coins -= cfg.losePenalty;
+                    updateUI();
+                    initRunner();
+                    return;
+                }
+                if (obstacles[i].x < -30) obstacles.splice(i, 1);
+            }
+
+            drawRunnerScene();
+            runnerLoop = requestAnimationFrame(updateRunner);
+        }
+
+        function drawRunnerScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(canvas.width, groundY); ctx.stroke();
+            
+            ctx.fillStyle = "#0ea5e9";
+            ctx.shadowBlur = 8; ctx.shadowColor = "#0ea5e9";
+            ctx.fillRect(runner.x, runner.y, runner.width, runner.height);
+            
+            obstacles.forEach(obs => {
+                if (obs.type === 'cactus') {
+                    ctx.fillStyle = "#ec4899"; 
+                    ctx.shadowColor = "#ec4899";
+                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                } else {
+                    ctx.fillStyle = "#a855f7"; 
+                    ctx.shadowColor = "#a855f7";
+                    // Zeichnet den lila Vogel schwebend auf Augenhöhe (auch wenn die unsichtbare Hitbox darüber blockiert)
+                    ctx.fillRect(obs.x, groundY - 26, obs.width, 12);
+                }
+            });
+            ctx.shadowBlur = 0; 
+        }
+
+        updateUI();
+        initRunner();
+    </script>
+</body>
+</html>
