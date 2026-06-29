@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Tipp10 Bot - White Edition</title>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 30px; background: #0f172a; color: #e5e7eb; max-width: 900px; margin: 0 auto; }
+    h1 { color: #ffffff; border-bottom: 2px solid #1e293b; padding-bottom: 10px; }
+    h2 { color: #e2e8f0; margin-top: 30px; }
+    pre { background: #1e293b; padding: 16px; border-radius: 8px; white-space: pre-wrap; overflow-x: auto; font-family: monospace; font-size: 13px; border: 1px solid #334155; position: relative; max-height: 500px; }
+    button { background: #ffffff; color: #0f172a; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 15px; transition: background 0.2s, color 0.2s; }
+    button:hover { background: #e2e8f0; }
+    .info-box { background: #1e1e2e; border-left: 4px solid #ffffff; padding: 12px; margin-bottom: 20px; border-radius: 0 8px 8px 0; font-size: 14px; }
+    .pin-display { font-size: 32px; color: #ffffff; font-weight: bold; letter-spacing: 5px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+
+<h1>🔑 Tipp10 Bot Control Center (White Edition)</h1>
+
+<div class="info-box">
+  <strong>Anleitung:</strong><br>
+  1. Kopiere das untenstehende <strong>Tampermonkey- / Konsolen-Skript</strong>.<br>
+  2. Füge es entweder in Tampermonkey ein oder öffne auf Tipp10 die Browser-Konsole (F12 bzw. Strg+Shift+I), tippe bei Aufforderung "Einfügen erlauben" ein und füge das Skript ein.<br>
+  3. Nutze die unten angezeigte Live-PIN, um das Menü im Bot freizuschalten. Die PIN aktualisiert sich alle 60 Sekunden.
+</div>
+
+<h2>1. Aktuelle Live-PIN</h2>
+<div id="pinBox" class="pin-display">------</div>
+<button onclick="copyPIN()" style="background: #e2e8f0; color: #0f172a;">🔑 PIN kopieren</button>
+
+<h2>2. Tampermonkey / Konsolen-Script</h2>
+<button onclick="copyScript()">📋 Script kopieren</button>
+<pre id="scriptBox">Generiere Script...</pre>
+
+<script>
+  // Geänderter Secret Seed
+  const SECRET_SEED = 938471023; 
+
+  function generatePIN(minutesTimestamp) {
+    let hash = (minutesTimestamp ^ SECRET_SEED) * 16777619;
+    hash = Math.abs(hash ^ (hash >>> 16));
+    let pin = hash % 1000000;
+    return String(pin).padStart(6, '0');
+  }
+
+  function updateGenerator() {
+    const currentMinuteTimestamp = Math.floor(Date.now() / 60000);
+    document.getElementById("pinBox").textContent = generatePIN(currentMinuteTimestamp);
+
+    const fullScript = `// ==UserScript==
+// @name         Tipp10 Pro-Bot Ultimate Edition v5.0
+// @namespace    http://tampermonkey.net/
+// @version      5.0
+// @description  Target Bot mit automatischer Buchstabenerkennung über Canvas-Hooking
+// @author       Linus Drebes
+// @match        *://*.tipp10.com/*
+// @grant        none
+// ==/UserScript==
+
+(async function() {
+    'use strict';
+
+    const SECRET_SEED = ${SECRET_SEED};
+
+    let intervalId = null;
+    let isActive = false;
+    let apm = 120;
+    let isUnlocked = false;
+    let detectedChars = new Set();
+
+    function generatePIN(minutesTimestamp) {
+        let hash = (minutesTimestamp ^ SECRET_SEED) * 16777619;
+        hash = Math.abs(hash ^ (hash >>> 16));
+        let pin = hash % 1000000;
+        return String(pin).padStart(6, '0');
+    }
+
+    // Canvas abfangen, um fallende Buchstaben fehlerfrei auszulesen
+    const originalFillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function(text, x, y, maxWidth) {
+        if (isActive && isUnlocked && text && text.length === 1 && text !== ' ') {
+            detectedChars.add(text);
+        }
+        return originalFillText.apply(this, arguments);
+    };
+
+    const style = document.createElement('style');
+    style.innerHTML = \`
+        #bot-panel {
+            position: fixed; top: 100px; left: 50px; width: 220px;
+            background: #1e1e2e; color: #cdd6f4; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-family: 'Segoe UI', Tahoma, sans-serif;
+            z-index: 99999; border: 1px solid #45475a; overflow: hidden;
+        }
+        #bot-header { background: #313244; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #45475a; }
+        #bot-content { padding: 15px; }
+        .bot-title { font-size: 11px; font-weight: bold; color: #ffffff; letter-spacing: 1px; text-transform: uppercase; }
+        #bot-close { cursor: pointer; color: #f38ba8; font-weight: bold; padding: 0 5px; }
+        .switch-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #45475a; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #ffffff; }
+        input:checked + .slider:before { transform: translateX(18px); background-color: #11111b; }
+        .setting-label { font-size: 11px; color: #bac2de; margin-bottom: 5px; display: block; }
+        #bot-status { margin-top: 15px; padding: 8px; background: #181825; border-radius: 6px; font-size: 10px; text-align: center; font-family: monospace; }
+        
+        .key-input-field { width: 100%; padding: 8px; background: #313244; border: 1px solid #45475a; color: #cdd6f4; border-radius: 4px; font-size: 14px; margin-bottom: 8px; box-sizing: border-box; text-align: center; }
+        .key-submit-btn { width: 100%; padding: 6px; background: #ffffff; border: none; color: #11111b; font-weight: bold; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        .disabled-overlay { opacity: 0.3; pointer-events: none; }
+    \`;
+    document.head.appendChild(style);   
+
+    const panel = document.createElement('div');
+    panel.id = 'bot-panel';
+    panel.innerHTML = \`
+        <div id="bot-header">
+            <span class="bot-title">TIPP10 TARGET BOT</span>
+            <span id="bot-close">✕</span>
+        </div>
+        <div id="bot-content">
+            <div id="key-section">
+                <input type="number" id="bot-key-input" class="key-input-field" placeholder="6-stellige PIN">
+                <button id="bot-key-submit" class="key-submit-btn">AKTIVIEREN</button>
+            </div>
+            <div id="controls-section" class="disabled-overlay">
+                <div class="switch-container">
+                    <span style="font-size: 13px;">Status:</span>
+                    <label class="switch">
+                        <input type="checkbox" id="bot-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <span class="setting-label">SPEED (APM):</span>
+                <input type="number" id="bot-speed-input" class="key-input-field" value="120" min="30" max="600" step="10" style="text-align: left; padding: 5px;">
+            </div>
+            <div id="bot-status">PIN SPERRE</div>
+        </div>
+\`;
+    document.body.appendChild(panel);
+
+    const toggle = panel.querySelector('#bot-toggle');
+    const speedInput = panel.querySelector('#bot-speed-input');
+    const statusBox = panel.querySelector('#bot-status');
+    const closeBtn = panel.querySelector('#bot-close');
+    
+    const keySection = panel.querySelector('#key-section');
+    const controlsSection = panel.querySelector('#controls-section');
+    const keyInput = panel.querySelector('#bot-key-input');
+    const keySubmit = panel.querySelector('#bot-key-submit');
+
+    keySubmit.onclick = () => {
+        const userInput = keyInput.value.trim();
+        if (userInput.length !== 6) {
+            statusBox.textContent = "❌ NUR 6 ZIFFERN";
+            return;
+        }
+
+        const exactCurrentMinute = Math.floor(Date.now() / 60000);
+        const pinPresent = generatePIN(exactCurrentMinute);
+
+        if (userInput === pinPresent) {
+            isUnlocked = true;
+            keySection.style.display = 'none';
+            controlsSection.classList.remove('disabled-overlay');
+            statusBox.textContent = "READY TO TYPE";
+            statusBox.style.color = '#ffffff';
+        } else {
+            statusBox.textContent = "❌ PIN FALSCH / ABGELAUFEN";
+            statusBox.style.color = '#f38ba8';
+        }
+    };
+
+    let isDragging = false, offset = [0,0];
+    panel.querySelector('#bot-header').onmousedown = (e) => { isDragging = true; offset = [panel.offsetLeft - e.clientX, panel.offsetTop - e.clientY]; };
+    document.onmousemove = (e) => { if (isDragging) { panel.style.left = (e.clientX + offset[0]) + 'px'; panel.style.top = (e.clientY + offset[1]) + 'px'; } };
+    document.onmouseup = () => isDragging = false;
+
+    speedInput.oninput = () => { 
+        if (!isUnlocked) return; 
+        let val = parseInt(speedInput.value);
+        if (isNaN(val) || val < 30) val = 30;
+        if (val > 600) val = 600;
+        apm = val; 
+        if (isActive) {
+            stopBot();
+            startBot();
+        }
+    };
+
+    closeBtn.onclick = () => { stopBot(); panel.remove(); style.remove(); };
+
+    function startBot() {
+        const ms = (60 * 1000) / apm;
+
+        intervalId = setInterval(() => {
+            const inputField = document.getElementById('gameinput');
+            if (!inputField || detectedChars.size === 0) return;
+
+            const targets = Array.from(detectedChars);
+            detectedChars.clear();
+
+            for (let nextChar of targets) {
+                const kdEvent = new KeyboardEvent('keydown', {
+                    key: 'Unidentified',
+                    keyCode: 229,
+                    which: 229,
+                    bubbles: true,
+                    cancelable: true
+                });
+                inputField.dispatchEvent(kdEvent);
+
+                inputField.value = nextChar;
+
+                const inpEvent = new InputEvent('input', {
+                    data: nextChar,
+                    bubbles: true,
+                    cancelable: true
+                });
+                inputField.dispatchEvent(inpEvent);
+                
+                inputField.value = '';
+            }
+            
+            statusBox.textContent = \`⚡ APM: \${apm}\`;
+            statusBox.style.color = '#ffffff';
+        }, ms);
+    }
+
+    function stopBot() {
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+    }
+
+    toggle.onchange = () => {
+        if (!isUnlocked) { toggle.checked = false; return; }
+        isActive = toggle.checked;
+        if (isActive) { 
+            detectedChars.clear();
+            
+            if (typeof GAME10 !== 'undefined' && GAME10.main && GAME10.main._g111) {
+                GAME10.main._g111(' ', 32);
+            }
+            
+            startBot();
+            statusBox.textContent = \`🚀 APM: \${apm}\`; 
+            statusBox.style.color = '#ffffff'; 
+        } else { 
+            stopBot(); 
+            statusBox.textContent = "⏹️ STOPPED"; 
+            statusBox.style.color = '#f38ba8'; 
+        }
+    };
+})();`;
+
+    document.getElementById("scriptBox").textContent = fullScript;
+  }
+
+  updateGenerator();
+  setInterval(updateGenerator, 5000);
+
+  function copyPIN() { navigator.clipboard.writeText(document.getElementById("pinBox").textContent); alert("PIN kopiert!"); }
+  function copyScript() { navigator.clipboard.writeText(document.getElementById("scriptBox").textContent); alert("Skript kopiert!"); }
+</script>
+
+</body>
+</html>
