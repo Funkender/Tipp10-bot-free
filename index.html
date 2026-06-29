@@ -181,6 +181,7 @@
         .badge-free { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
         .badge-plus { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.3); }
         .badge-premium { background: rgba(234, 179, 8, 0.15); color: #fde047; border: 1px solid rgba(253, 224, 71, 0.3); }
+        .badge-pro { background: rgba(6, 182, 212, 0.15); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); }
 
         /* Buttons */
         .btn {
@@ -275,6 +276,16 @@
             <a id="dl-premium" href="premium.html" class="btn btn-dl btn-disabled" onclick="return checkDownload('premium')">Download</a>
         </div>
 
+        <div class="card glass-panel">
+            <span class="badge badge-pro">Pro Rang</span>
+            <h3>Hansdampf Pro – Götter-Edition</h3>
+            <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 20px;">
+                Die ultimative Waffe für absolute Domination. Nur für PRO-Member.
+            </p>
+
+            <!-- Weiterleitung auf pro.html -->
+            <a id="dl-pro" href="pro.html" class="btn btn-dl btn-disabled" onclick="return checkDownload('pro')">Download</a>
+        </div>
 
             </div>
 
@@ -320,6 +331,17 @@
       So leise, dass niemand merkt, wie Hansdampf im Hintergrund die Tastatur zum Glühen bringt.
     </p>
 
+    <h3 style="margin-top: 35px;">Pro Model – die Götter-Waffe</h3>
+    <p style="line-height: 1.6;">
+      Dann gibt es noch das <strong>Pro Model</strong> – und hier wird es ERNST.
+      Mit dem Pro Model zwingst du selbst das Typing Game in die Knie.
+      Wir sprechen von <strong>unbegrenzten APM</strong>, einer Geschwindigkeit so absurd, dass Servern die Finger zittern.
+      Das Pro Model ist nicht nur schneller – es ist ein digitales Schwert, das unaufhaltsam durchs Gelände schneidet.
+      Du bist nicht mehr nur ein Spieler, du bist ein GOTT des Schreibtischs.
+      Die Konkurrenz sieht dich nicht einmal ankommen. Während sie noch den ersten Buchstaben tippen, hast du bereits die ganze Sinfonie zu Ende gespielt.
+      Das Pro Model wurde erschaffen für jene, die normale Rekorde zu langweilig finden.
+    </p>
+
     <p style="margin-top: 45px; font-size: 1.2rem; font-weight: bold; text-align: center;">
       Starte jetzt rein – und erlebe, wie Hansdampf das Tippen in eine neue Dimension katapultiert.
     </p>
@@ -335,15 +357,15 @@
       Schritt für Schritt erklärt.
     </p>
 
-    <h3 style="margin-top: 30px;">1. Auf „Download“ klicken</h3>
+    <h3 style="margin-top: 30px;">1. Auf „Download" klicken</h3>
     <p style="line-height: 1.6;">
       Zuerst gehst du auf den <strong>Download‑Button</strong> auf der Seite.  
       Dadurch kommst du auf eine neue Seite, auf der du das Skript bekommst.
     </p>
 
-    <h3 style="margin-top: 30px;">2. Auf „Copy Script“ drücken</h3>
+    <h3 style="margin-top: 30px;">2. Auf „Copy Script" drücken</h3>
     <p style="line-height: 1.6;">
-      Auf der neuen Seite findest du den Button <strong>„Copy Script“</strong>.  
+      Auf der neuen Seite findest du den Button <strong>„Copy Script"</strong>.  
       Ein Klick – und der komplette Code wird automatisch in deine Zwischenablage kopiert.
     </p>
 
@@ -353,7 +375,7 @@
       <strong>STRG + SHIFT + K</strong>  
       (das öffnet die Firefox Entwickler‑Konsole).
       <br>
-      Dort fügst du das kopierte Skript einfach ein und bestätigst mit Enter. Falls das nicht geht schreibst du einfach Einfügen erlauben in die Konsole genau so auch groß klein schreibung usw beachten dann sollte ein Fehler kommen aber die Konsole dennoch entsperrt sein aldo kopiere das script erneut rein um ihn zu starten.
+      Dort fügst du das kopierte Skript einfach ein und bestätigst mit Enter. Falls das nicht geht schreibst du einfach Einfügen erlauben in die Konsole genau so auch groß klein schreibung usw beachten dann sollte ein Fehler kommen aber die Konsole dennoch entsperrt sein alno kopiere das script erneut rein um ihn zu starten.
     </p>
 
     <h3 style="margin-top: 30px;">4. Live‑PIN eingeben</h3>
@@ -364,7 +386,7 @@
     </p>
 
     <p style="margin-top: 40px; font-size: 1.2rem; font-weight: bold; text-align: center;">
-      Und das war’s – Hansdampf ist bereit, deine Tastatur in ein Hochgeschwindigkeits‑Kraftwerk zu verwandeln.
+      Und das war's – Hansdampf ist bereit, deine Tastatur in ein Hochgeschwindigkeits‑Kraftwerk zu verwandeln.
     </p>
 
   </div>
@@ -410,17 +432,24 @@
         document.getElementById('user-rank').innerText = userStats.rank.toUpperCase();
 
         // Wenn Plus oder Premium aktiv ist, schalte den Plus-Download frei
-        if (userStats.rank === 'plus' || userStats.rank === 'premium') {
+        if (userStats.rank === 'plus' || userStats.rank === 'premium' || userStats.rank === 'pro') {
             document.getElementById('dl-plus').classList.remove('btn-disabled');
         } else {
             document.getElementById('dl-plus').classList.add('btn-disabled');
         }
         
         // Wenn Premium aktiv ist, schalte den Premium-Download frei
-        if (userStats.rank === 'premium') {
+        if (userStats.rank === 'premium' || userStats.rank === 'pro') {
             document.getElementById('dl-premium').classList.remove('btn-disabled');
         } else {
             document.getElementById('dl-premium').classList.add('btn-disabled');
+        }
+
+        // Wenn Pro aktiv ist, schalte den Pro-Download frei
+        if (userStats.rank === 'pro') {
+            document.getElementById('dl-pro').classList.remove('btn-disabled');
+        } else {
+            document.getElementById('dl-pro').classList.add('btn-disabled');
         }
         
         localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
@@ -428,8 +457,9 @@
 
     // Überprüfung beim Klick auf einen geschützten Download
     function checkDownload(requiredRank) {
-        if (requiredRank === 'plus' && (userStats.rank === 'plus' || userStats.rank === 'premium')) return true;
-        if (requiredRank === 'premium' && userStats.rank === 'premium') return true;
+        if (requiredRank === 'plus' && (userStats.rank === 'plus' || userStats.rank === 'premium' || userStats.rank === 'pro')) return true;
+        if (requiredRank === 'premium' && (userStats.rank === 'premium' || userStats.rank === 'pro')) return true;
+        if (requiredRank === 'pro' && userStats.rank === 'pro') return true;
         
         alert(`Sperre aktiv! Du brauchst den ${requiredRank.toUpperCase()}-Rang. Spiele in der Arcade, um Münzen zu sammeln und kaufe ihn im Shop!`);
         return false;
