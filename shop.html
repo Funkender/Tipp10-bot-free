@@ -131,7 +131,7 @@
             justify-content: center;
             gap: 40px;
             flex-wrap: wrap;
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -158,6 +158,7 @@
 
         .plus-box::before { background: linear-gradient(#c084fc, #6366f1); }
         .premium-box::before { background: linear-gradient(#fde047, #ea580c); }
+        .pro-box::before { background: linear-gradient(#06b6d4, #3b82f6); }
 
         @keyframes rotateGlow {
             from { transform: rotate(0deg); }
@@ -206,6 +207,9 @@
 
         .premium-btn { background: #fde047; color: #0f172a; box-shadow: 0 0 15px rgba(253, 224, 71, 0.4); }
         .premium-btn:hover:not(:disabled) { box-shadow: 0 0 25px #fde047; transform: scale(1.02); }
+
+        .pro-btn { background: #06b6d4; color: #0f172a; box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); }
+        .pro-btn:hover:not(:disabled) { box-shadow: 0 0 25px #06b6d4; transform: scale(1.02); }
 
         .btn-disabled {
             background: rgba(255, 255, 255, 0.05) !important;
@@ -258,6 +262,15 @@
             </div>
         </div>
 
+        <div class="glow-box pro-box">
+            <div class="shop-content">
+                <h3 style="color: #06b6d4;">HANSDAMPF PRO</h3>
+                <div class="price">1000 🪙</div>
+                <p>Die Krönung aller Rankings. Exklusiver Zugang zu Premium-Features, Priorität-Support und speziellen Inhalten.</p>
+                <button id="buy-pro" class="btn-buy pro-btn" onclick="buyRank('pro', 1000)">Rang Erwerben</button>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -274,15 +287,20 @@
                 document.getElementById('current-rank').innerText = userStats.rank;
             }
 
-            if (userStats.rank === 'plus' || userStats.rank === 'premium') {
+            if (userStats.rank === 'plus' || userStats.rank === 'premium' || userStats.rank === 'pro') {
                 document.getElementById('buy-plus').innerText = "Besessen ✓";
                 document.getElementById('buy-plus').classList.add('btn-disabled');
                 document.getElementById('buy-plus').disabled = true;
             }
-            if (userStats.rank === 'premium') {
+            if (userStats.rank === 'premium' || userStats.rank === 'pro') {
                 document.getElementById('buy-premium').innerText = "Besessen ✓";
                 document.getElementById('buy-premium').classList.add('btn-disabled');
                 document.getElementById('buy-premium').disabled = true;
+            }
+            if (userStats.rank === 'pro') {
+                document.getElementById('buy-pro').innerText = "Besessen ✓";
+                document.getElementById('buy-pro').classList.add('btn-disabled');
+                document.getElementById('buy-pro').disabled = true;
             }
 
             localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
