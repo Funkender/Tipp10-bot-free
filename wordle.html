@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade - Tägliches Wort-Rätsel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { min-height: 100vh; background: linear-gradient(45deg, #0f172a, #1e1b4b, #2e1065, #0f172a); background-size: 400% 400%; animation: gradientBG 15s ease infinite; color: #f8fafc; padding-top: 60px; display: flex; flex-direction: column; align-items: center; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        
+        .game-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 25px; width: 380px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); margin-top: 10px; }
+        h3 { margin-bottom: 5px; font-size: 1.5rem; color: #38bdf8; text-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
+        
+        .reward-info { font-size: 0.85rem; color: #94a3b8; text-align: center; margin-bottom: 20px; }
+        .wallet-display { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 25px; border-radius: 30px; margin-bottom: 20px; font-size: 1.1rem; }
+        .btn-back { color: #94a3b8; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .btn-back:hover { color: #fff; }
+
+        .wordle-grid { display: grid; grid-template-rows: repeat(6, 1fr); gap: 6px; margin-bottom: 20px; }
+        .wordle-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 280px; height: 50px; }
+        .wordle-cell { background: rgba(255, 255, 255, 0.03); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 1.4rem; font-weight: bold; text-transform: uppercase; color: #fff; transition: background 0.3s, border-color 0.3s; }
+        
+        .wordle-cell.correct { background: #22c55e; border-color: #22c55e; }
+        .wordle-cell.present { background: #eab308; border-color: #eab308; }
+        .wordle-cell.absent { background: #475569; border-color: #475569; }
+
+        #hidden-input { position: absolute; opacity: 0; pointer-events: none; }
+        
+        .status-msg { font-weight: bold; text-align: center; margin-bottom: 15px; font-size: 1rem; min-height: 25px; line-height: 1.4; }
+        .btn-submit { background: #38bdf8; color: #0f172a; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; transition: all 0.2s; }
+        .btn-submit:hover { background: #7dd3fc; }
+        .btn-submit:disabled { background: rgba(255,255,255,0.05); color: #64748b; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <a href="games.html" class="btn-back">⬅ Zurück zur Übersicht</a>
+
+    <div class="wallet-display">
+        Kontostand: <strong style="color: #fde047;"><span id="coin-count">0</span> 🪙</strong>
+    </div>
+
+    <div class="game-card">
+        <h3>Daily Word Riddle</h3>
+        <p class="reward-info">Je schneller du rätst, desto mehr Coins! (250 bis 100 🪙)</p>
+        
+        <div class="status-msg" id="status-message">Klicke ins Feld & tippe ein 5-Buchstaben-Wort!</div>
+
+        <input type="text" id="hidden-input" maxlength="5" autocomplete="off">
+
+        <div class="wordle-grid" id="board" onclick="focusInput()"></div>
+
+        <button class="btn-submit" id="submit-btn" onclick="checkGuess()">Wort prüfen (Enter)</button>
+    </div>
+
+    <script>
+        let userStats = JSON.parse(localStorage.getItem('portal_stats_v3')) || { coins: 0, rank: 'free' };
+        
+        // Bekanntere deutsche Wörter mit 5 Buchstaben
+        const hardWords = [
+            "STURM", "RADIO", "STIFT", "TRAUM", "FLUSS", "STADT", "STERN", "TIGER", "PROFI", "WOLKE",
+            "KABEL", "APFEL", "FEUER", "SONNE", "ONKEL", "POKER", "KRAFT", "MILCH", "COACH", "BLUME",
+            "GRUND", "GRILL", "VOGEL", "PUMPE", "ZUCKER", "PREIS", "BLICK", "THRON", "KREUZ", "DRAHT"
+        ];
+        
+        // Einzigartiger Key für das aktuelle Datum generieren
+        const now = new Date();
+        const todayKey = "wordle_status_" + now.getFullYear() + "_" + now.getMonth() + "_" + now.getDate();
+
+        // Wort basierend auf dem Kalendertag auswählen (wechselt garantiert jede Nacht um 00:00 Uhr)
+        const start = new Date(now.getFullYear(), 0, 0);
+        const diff = now - start;
+        const oneDay = 1000 * 60 * 60 * 24;
+        const dayOfYear = Math.floor(diff / oneDay);
+        const todayWord = hardWords[dayOfYear % hardWords.length].toUpperCase();
+
+        let currentRow = 0;
+        let currentGuess = "";
+        let isGameOver = false;
+
+        // Münzen-Verteilung je nach benötigter Reihe (Reihe 0 = 1. Versuch)
+        const coinRewards = [250, 200, 175, 150, 125, 100];
+
+        function updateUI() {
+            document.getElementById('coin-count').innerText = userStats.coins;
+            localStorage.setItem('portal_stats_v3', JSON.stringify(userStats));
+        }
+
+        // Grid erzeugen
+        const board = document.getElementById('board');
+        for (let i = 0; i < 6; i++) {
+            const row = document.createElement('div');
+            row.className = 'wordle-row';
+            for (let j = 0; j < 5; j++) {
+                const cell = document.createElement('div');
+                cell.className = 'wordle-cell';
+                cell.id = `cell-${i}-${j}`;
+                row.appendChild(cell);
+            }
+            board.appendChild(row);
+        }
+
+        // ABSOLUTE TAGES-SPERRE PRÜFEN (Egal ob gewonnen oder verloren)
+        const checkPlayedStatus = localStorage.getItem(todayKey);
+        if (checkPlayedStatus) {
+            isGameOver = true;
+            document.getElementById('submit-btn').disabled = true;
+            
+            if (checkPlayedStatus === "WON") {
+                document.getElementById('status-message').innerHTML = "<span style='color: #22c55e;'>Du hast heute schon gewonnen! 🏆<br><small style='color:#94a3b8;'>Nächstes Wort morgen ab Mitternacht.</small></span>";
+            } else {
+                document.getElementById('status-message').innerHTML = "<span style='color: #ef4444;'>Du hast heute bereits alle Versuche verbraucht! ❌<br><small style='color:#94a3b8;'>Neues Wort morgen ab Mitternacht.</small></span>";
+            }
+            
+            // Zeige das heutige Wort in der ersten Reihe an
+            for(let j=0; j<5; j++) {
+                let cell = document.getElementById(`cell-0-${j}`);
+                cell.innerText = todayWord[j];
+                cell.classList.add(checkPlayedStatus === "WON" ? 'correct' : 'absent');
+            }
+        }
+
+        function focusInput() {
+            if (!isGameOver) document.getElementById('hidden-input').focus();
+        }
+        focusInput();
+
+        document.getElementById('hidden-input').addEventListener('input', (e) => {
+            if (isGameOver) return;
+            currentGuess = e.target.value.toUpperCase().replace(/[^A-Z]/g, "");
+            drawRow();
+        });
+
+        document.getElementById('hidden-input').addEventListener('keydown', (e) => {
+            if (e.key === "Enter") checkGuess();
+        });
+
+        function drawRow() {
+            for (let j = 0; j < 5; j++) {
+                const cell = document.getElementById(`cell-${currentRow}-${j}`);
+                cell.innerText = currentGuess[j] || "";
+            }
+        }
+
+        function checkGuess() {
+            if (isGameOver || currentGuess.length < 5) return;
+
+            const guess = currentGuess;
+            const target = todayWord;
+            
+            let targetLetterCounts = {};
+            for (let char of target) {
+                targetLetterCounts[char] = (targetLetterCounts[char] || 0) + 1;
+            }
+
+            // 1. Durchlauf: Grün (Richtig)
+            for (let j = 0; j < 5; j++) {
+                const cell = document.getElementById(`cell-${currentRow}-${j}`);
+                if (guess[j] === target[j]) {
+                    cell.classList.add('correct');
+                    targetLetterCounts[guess[j]]--;
+                }
+            }
+
+            // 2. Durchlauf: Gelb / Grau
+            for (let j = 0; j < 5; j++) {
+                const cell = document.getElementById(`cell-${currentRow}-${j}`);
+                if (guess[j] !== target[j]) {
+                    if (target.includes(guess[j]) && targetLetterCounts[guess[j]] > 0) {
+                        cell.classList.add('present');
+                        targetLetterCounts[guess[j]]--;
+                    } else {
+                        cell.classList.add('absent');
+                    }
+                }
+            }
+
+            // --- SIEG ---
+            if (guess === target) {
+                isGameOver = true;
+                let reward = coinRewards[currentRow]; // Coins je nach Reihe
+                userStats.coins += reward;
+                
+                document.getElementById('status-message').innerHTML = `<span style='color: #22c55e;'>Richtig! Im ${currentRow + 1}. Versuch gelöst.<br>+${reward} Coins verdient! 🎉</span>`;
+                localStorage.setItem(todayKey, "WON"); // Blockiert das Spiel für den restlichen Tag
+                document.getElementById('submit-btn').disabled = true;
+                updateUI();
+                return;
+            }
+
+            currentRow++;
+            currentGuess = "";
+            document.getElementById('hidden-input').value = "";
+
+            // --- NIEDERLAGE ---
+            if (currentRow >= 6) {
+                isGameOver = true;
+                document.getElementById('status-message').innerHTML = `<span style='color: #ef4444;'>Schade! Das Wort war: ${target}.<br><small style='color:#94a3b8;'>Morgen gibt's eine neue Chance!</small></span>`;
+                localStorage.setItem(todayKey, "LOST"); // Blockiert das Spiel ebenfalls!
+                document.getElementById('submit-btn').disabled = true;
+            }
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
